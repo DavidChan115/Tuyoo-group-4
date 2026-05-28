@@ -27,6 +27,17 @@ public class Test1 : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
+        // Zero-friction material so player slides along walls instead of sticking
+        Collider col = GetComponent<Collider>();
+        if (col != null)
+        {
+            PhysicsMaterial zeroFriction = new PhysicsMaterial();
+            zeroFriction.dynamicFriction = 0f;
+            zeroFriction.staticFriction = 0f;
+            zeroFriction.frictionCombine = PhysicsMaterialCombine.Minimum;
+            col.material = zeroFriction;
+        }
+
         if (playerCamera == null)
             playerCamera = GetComponentInChildren<Camera>()?.transform;
 
@@ -82,17 +93,18 @@ public class Test1 : MonoBehaviour
         // Rotate player body
         rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
 
-        Vector3 targetVelocity = new Vector3(
-            moveInput.x * moveSpeed,
-            rb.linearVelocity.y,
-            moveInput.z * moveSpeed
-        );
+        // Use AddForce instead of directly setting velocity —
+        // lets the physics engine handle collision response naturally
+        Vector3 targetHVel = new Vector3(moveInput.x, 0f, moveInput.z) * moveSpeed;
+        Vector3 currentHVel = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        Vector3 deltaV = targetHVel - currentHVel;
 
-        rb.linearVelocity = targetVelocity;
+        rb.AddForce(deltaV, ForceMode.VelocityChange);
 
         if (jumpPressed)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             jumpPressed = false;
         }
     }
@@ -110,7 +122,9 @@ public class Test1 : MonoBehaviour
 
     void CheckGrounded()
     {
-        Vector3 origin = transform.position + Vector3.up * 0.1f;
-        isGrounded = Physics.Raycast(origin, Vector3.down, groundCheckDistance, groundMask);
+        // SphereCast from center downward — the radius prevents missing surfaces
+        // due to thin gaps or floating-point imprecision
+        Vector3 origin = transform.position + Vector3.up * 0.3f;
+        isGrounded = Physics.SphereCast(origin, 0.3f, Vector3.down, out _, groundCheckDistance, groundMask);
     }
 }
