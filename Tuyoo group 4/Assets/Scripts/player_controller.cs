@@ -1,28 +1,63 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Test1 : MonoBehaviour
 {
-    // Start is called before the first frame update
+    public float moveSpeed = 5f;
+    public float jumpForce = 5f;
+
+    private Rigidbody rb;
+    private bool isGrounded;
+    private bool jumpPressed;
+
+    public float groundCheckDistance = 1.1f;
+    public LayerMask groundMask = ~0; // defaults to "Everything"
+
+    private Vector3 moveInput;
+
     void Start()
     {
-        Debug.Log("test sucess"); // console check
+        rb = GetComponent<Rigidbody>();
+
+        // Prevent tipping over
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
+        Debug.Log("test sucess");
     }
 
-    // Update is called once per frame
     void Update()
     {
+        // Read input in Update (best practice for input)
         float horizontalInput = Input.GetAxis("Horizontal");
         float verticalInput = Input.GetAxis("Vertical");
+        moveInput = new Vector3(horizontalInput, 0, verticalInput);
 
-        Vector3 movement = new Vector3(horizontalInput, 0, verticalInput); // x,y,z
-        transform.Translate(movement * Time.deltaTime * 5f); 
-        // move the object based on input and time, Time.deltaTime makes movement frame rate independent 
+        CheckGrounded();
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+            jumpPressed = true;
+    }
+
+    void FixedUpdate()
+    {
+        // Apply movement in FixedUpdate (sync with physics)
+        Vector3 targetVelocity = new Vector3(
+            moveInput.x * moveSpeed,
+            rb.linearVelocity.y,
+            moveInput.z * moveSpeed
+        );
+
+        rb.linearVelocity = targetVelocity;
+
+        if (jumpPressed)
         {
-            Debug.Log("space key was pressed");
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            jumpPressed = false;
         }
+    }
+
+    void CheckGrounded()
+    {
+        Vector3 origin = transform.position + Vector3.up * 0.1f;
+        isGrounded = Physics.Raycast(origin, Vector3.down, groundCheckDistance, groundMask);
     }
 }

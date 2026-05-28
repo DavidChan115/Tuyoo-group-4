@@ -618,6 +618,7 @@ GameObject:
   - component: {fileID: 636190474}
   - component: {fileID: 636190476}
   - component: {fileID: 636190475}
+  - component: {fileID: 636190477}
   m_Layer: 0
   m_Name: Point Light
   m_TagString: Untagged
@@ -680,8 +681,8 @@ Light:
   serializedVersion: 13
   m_Type: 2
   m_Color: {r: 0.836478, g: 0.79431885, b: 0.654978, a: 1}
-  m_Intensity: 10
-  m_Range: 10
+  m_Intensity: 500
+  m_Range: 30
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -734,6 +735,26 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!114 &636190477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 636190473}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14dc1dca284e9c547bbf1b5f5a9696f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PointLightController
+  player: {fileID: 1538329237}
+  pickupRange: 3
+  heldLocalPosition: {x: -1.52, y: 0.98, z: 0.12}
+  baseIntensity: 30
+  flickerAmount: 1.5
+  flickerSpeed: 6
+  flutterAmount: 0.3
+  flutterSpeed: 18
 --- !u!1 &797740946
 GameObject:
   m_ObjectHideFlags: 0
@@ -841,7 +862,7 @@ Transform:
   m_GameObject: {fileID: 797740946}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.99, y: 0.11, z: 3.36}
+  m_LocalPosition: {x: 1.99, y: -1.84, z: 3.36}
   m_LocalScale: {x: 0.5, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -908,6 +929,7 @@ GameObject:
   - component: {fileID: 1523606602}
   - component: {fileID: 1523606601}
   - component: {fileID: 1523606600}
+  - component: {fileID: 1523606604}
   m_Layer: 0
   m_Name: Cylinder
   m_TagString: Untagged
@@ -1010,6 +1032,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1523606604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1523606599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8474e809961be584f840ebdcef4855e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShadowPlatform
+  pointLight: {fileID: 636190476}
+  shadowCaster: {fileID: 0}
+  groundY: 0
+  yOffset: 0.05
+  maxShadowDistance: 50
+  maxShadowHeight: 100
 --- !u!1 &1538329232
 GameObject:
   m_ObjectHideFlags: 0
@@ -1165,6 +1205,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38e946a15a4f6f1488ed6e67ff03f9ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Test1
+  moveSpeed: 5
+  jumpForce: 5
+  groundCheckDistance: 1.1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1585878691
 GameObject:
   m_ObjectHideFlags: 0
