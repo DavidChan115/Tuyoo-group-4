@@ -34,11 +34,14 @@ public class MirrorReflection : MonoBehaviour
     [Tooltip("How far the reflected spotlight reaches.")]
     public float spotRange = 20f;
     public Color spotColor = Color.white;
+    [Tooltip("Optional — assign your own Light to use as the reflection ray. If left empty, a Spotlight is created automatically.")]
+    public Light customReflectionLight;
 
     [Header("Debug")]
     public bool drawGizmos = true;
 
     private Light spotLight;
+    private bool autoCreatedLight;
     private BoxCollider boxCol;
 
     // ----- Unity events -----
@@ -46,7 +49,17 @@ public class MirrorReflection : MonoBehaviour
     void Awake()
     {
         boxCol = GetComponent<BoxCollider>();
-        CreateSpotlight();
+
+        if (customReflectionLight != null)
+        {
+            spotLight = customReflectionLight;
+            autoCreatedLight = false;
+        }
+        else
+        {
+            CreateSpotlight();
+            autoCreatedLight = true;
+        }
     }
 
     void Update()
@@ -76,14 +89,18 @@ public class MirrorReflection : MonoBehaviour
         float falloff = useDistanceFalloff ? 1f / Mathf.Max(1f, distance * distance) : 1f;
 
         spotLight.intensity = sourceIntensity * intensityMultiplier * falloff;
-        spotLight.color = spotColor;
-        spotLight.spotAngle = spotAngle;
-        spotLight.range = spotRange;
+
+        if (autoCreatedLight)
+        {
+            spotLight.color = spotColor;
+            spotLight.spotAngle = spotAngle;
+            spotLight.range = spotRange;
+        }
     }
 
     void OnDestroy()
     {
-        if (spotLight != null)
+        if (autoCreatedLight && spotLight != null)
             Destroy(spotLight.gameObject);
     }
 
