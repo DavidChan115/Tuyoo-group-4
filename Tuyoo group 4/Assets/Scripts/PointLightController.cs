@@ -5,6 +5,8 @@ public class PointLightController : MonoBehaviour
     [Header("Pickup / Drop")]
     public Transform player;
     public Vector3 heldLocalPosition = new Vector3(-0.1f, 0.43f, -0.8f);
+    public float flySpeed = 8f;
+    public float flySnapDistance = 0.1f;
 
     [Header("Flicker")]
     public float baseIntensity = 10f;
@@ -15,6 +17,7 @@ public class PointLightController : MonoBehaviour
 
     private new Light light;
     private bool isHeld = true;
+    private bool isFlying;
     private float originalIntensity;
 
     void Start()
@@ -27,8 +30,31 @@ public class PointLightController : MonoBehaviour
     {
         if (light == null) return;
 
-        HandlePickupDrop();
+        if (isFlying)
+            FlyTowardPlayer();
+        else
+            HandlePickupDrop();
+
         ApplyFlicker();
+    }
+
+    void FlyTowardPlayer()
+    {
+        Vector3 targetWorldPos = player.TransformPoint(heldLocalPosition);
+        Vector3 toTarget = targetWorldPos - transform.position;
+        float distance = toTarget.magnitude;
+
+        if (distance <= flySnapDistance)
+        {
+            transform.SetParent(player);
+            transform.localPosition = heldLocalPosition;
+            isFlying = false;
+            isHeld = true;
+            return;
+        }
+
+        float step = flySpeed * Time.deltaTime;
+        transform.position += toTarget.normalized * Mathf.Min(step, distance);
     }
 
     void HandlePickupDrop()
@@ -39,16 +65,12 @@ public class PointLightController : MonoBehaviour
         {
             if (isHeld)
             {
-                // Drop: unparent, stay at world position
                 transform.SetParent(null);
                 isHeld = false;
             }
             else
             {
-                // Pick up: teleport to player, re-parent
-                transform.SetParent(player);
-                transform.localPosition = heldLocalPosition;
-                isHeld = true;
+                isFlying = true;
             }
         }
     }
