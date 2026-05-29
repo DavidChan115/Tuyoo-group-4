@@ -4,7 +4,7 @@ public class PointLightController : MonoBehaviour
 {
     [Header("Pickup / Drop")]
     public Transform player;
-    public Vector3 heldLocalPosition = new Vector3(-1.52f, 0.98f, 0.12f);
+    public Vector3 heldLocalPosition = new Vector3(-0.1f, 0.43f, -0.8f);
 
     [Header("Flicker")]
     public float baseIntensity = 10f;
