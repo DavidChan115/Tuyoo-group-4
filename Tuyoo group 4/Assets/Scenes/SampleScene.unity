@@ -1098,7 +1098,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &636190474
 Transform:
   m_ObjectHideFlags: 0
@@ -1224,6 +1224,7 @@ MonoBehaviour:
   heldLocalPosition: {x: -0.1, y: 0.43, z: -0.8}
   flySpeed: 8
   flySnapDistance: 0.1
+  spotLight: {fileID: 0}
   baseIntensity: 30
   flickerAmount: 3
   flickerSpeed: 10
@@ -1240,8 +1241,9 @@ GameObject:
   - component: {fileID: 747693551}
   - component: {fileID: 747693553}
   - component: {fileID: 747693552}
+  - component: {fileID: 747693554}
   m_Layer: 0
-  m_Name: Directional Light
+  m_Name: Spot Light
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1255,8 +1257,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 747693550}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.102, y: 0.412, z: -0.869}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1300,15 +1302,15 @@ Light:
   m_GameObject: {fileID: 747693550}
   m_Enabled: 1
   serializedVersion: 13
-  m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1
-  m_Range: 10
+  m_Type: 0
+  m_Color: {r: 1, g: 0.92231536, b: 0.63836473, a: 1}
+  m_Intensity: 500
+  m_Range: 50
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
-    m_Type: 0
+    m_Type: 1
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -1356,6 +1358,28 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!114 &747693554
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 747693550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14dc1dca284e9c547bbf1b5f5a9696f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PointLightController
+  player: {fileID: 1538329237}
+  heldLocalPosition: {x: -0.1, y: 0.43, z: -0.8}
+  flySpeed: 8
+  flySnapDistance: 0.1
+  spotLight: {fileID: 747693553}
+  baseIntensity: 30
+  flickerAmount: 3
+  flickerSpeed: 6
+  flutterAmount: 0.3
+  flutterSpeed: 18
 --- !u!1 &774099543
 GameObject:
   m_ObjectHideFlags: 0
@@ -1682,7 +1706,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8474e809961be584f840ebdcef4855e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShadowPlatform
-  pointLight: {fileID: 636190476}
+  lights: []
   shadowCaster: {fileID: 0}
   groundObjects:
   - {fileID: 165512565}
@@ -1979,7 +2003,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8474e809961be584f840ebdcef4855e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShadowPlatform
-  pointLight: {fileID: 636190476}
+  lights:
+  - {fileID: 636190476}
+  - {fileID: 747693553}
   shadowCaster: {fileID: 0}
   groundObjects:
   - {fileID: 165512565}
@@ -2109,8 +2135,8 @@ Transform:
   m_Children:
   - {fileID: 276641931}
   - {fileID: 636190474}
-  - {fileID: 1585878692}
   - {fileID: 747693551}
+  - {fileID: 1585878692}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 450.116, z: 0}
 --- !u!65 &1538329239

@@ -115,6 +115,17 @@ public class ShadowPlatform : MonoBehaviour
                         objCenterXZ.z + Mathf.Sin(angle) * objRadius
                     );
 
+                    // Back-face culling: skip points the light can't reach
+                    Vector3 lightToSample = samplePoint - lightPos;
+                    Vector3 surfaceNormal = new Vector3(
+                        samplePoint.x - objCenterXZ.x,
+                        0f,
+                        samplePoint.z - objCenterXZ.z
+                    ).normalized;
+
+                    if (Vector3.Dot(lightToSample, surfaceNormal) >= 0f)
+                        continue;
+
                     Vector3 projected = ProjectPoint(samplePoint, lightPos, targetY);
 
                     if (!float.IsInfinity(projected.x) && !float.IsNaN(projected.x))
