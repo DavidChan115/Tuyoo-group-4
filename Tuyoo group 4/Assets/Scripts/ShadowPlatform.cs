@@ -257,36 +257,57 @@ public class ShadowPlatform : MonoBehaviour
     bool GetCylinderParams(MeshFilter filter, Transform casterTransform,
         out float bottomY, out float topY, out float radius, out Vector3 centerXZ)
     {
-        Vector3[] vertices = filter.sharedMesh.vertices;
-        if (vertices.Length == 0)
+        // Prefer collider bounds — works on any object, no mesh import settings needed
+        Collider col = shadowCaster.GetComponent<Collider>();
+        if (col != null)
         {
-            bottomY = topY = radius = 0f;
-            centerXZ = Vector3.zero;
-            return false;
+            Bounds b = col.bounds;
+            centerXZ = new Vector3(b.center.x, 0f, b.center.z);
+            bottomY = b.min.y;
+            topY   = b.max.y;
+            radius = Mathf.Max(b.extents.x, b.extents.z);
+            return true;
         }
 
-        Vector3 worldCenter = casterTransform.TransformPoint(filter.sharedMesh.bounds.center);
-        centerXZ = new Vector3(worldCenter.x, 0f, worldCenter.z);
-
-        float minY = float.MaxValue;
-        float maxY = float.MinValue;
-        float maxR = 0f;
-
-        for (int i = 0; i < vertices.Length; i++)
+        // Fallback: mesh vertices (only works if Read/Write is enabled on the mesh asset)
+        Mesh mesh = filter.sharedMesh;
+        if (mesh != null && mesh.isReadable)
         {
-            Vector3 wv = casterTransform.TransformPoint(vertices[i]);
+            Vector3[] vertices = mesh.vertices;
+            if (vertices.Length == 0)
+            {
+                bottomY = topY = radius = 0f;
+                centerXZ = Vector3.zero;
+                return false;
+            }
 
-            if (wv.y < minY) minY = wv.y;
-            if (wv.y > maxY) maxY = wv.y;
+            Vector3 worldCenter = casterTransform.TransformPoint(mesh.bounds.center);
+            centerXZ = new Vector3(worldCenter.x, 0f, worldCenter.z);
 
-            float r = new Vector2(wv.x - centerXZ.x, wv.z - centerXZ.z).magnitude;
-            if (r > maxR) maxR = r;
+            float minY = float.MaxValue;
+            float maxY = float.MinValue;
+            float maxR = 0f;
+
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Vector3 wv = casterTransform.TransformPoint(vertices[i]);
+
+                if (wv.y < minY) minY = wv.y;
+                if (wv.y > maxY) maxY = wv.y;
+
+                float r = new Vector2(wv.x - centerXZ.x, wv.z - centerXZ.z).magnitude;
+                if (r > maxR) maxR = r;
+            }
+
+            bottomY = minY;
+            topY = maxY;
+            radius = maxR;
+            return true;
         }
 
-        bottomY = minY;
-        topY = maxY;
-        radius = maxR;
-        return true;
+        bottomY = topY = radius = 0f;
+        centerXZ = Vector3.zero;
+        return false;
     }
 
     void ClearShadow()

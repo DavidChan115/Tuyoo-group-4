@@ -1028,11 +1028,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PointLightController
   player: {fileID: 1538329237}
-  pickupRange: 3
-  heldLocalPosition: {x: -1.52, y: 0.98, z: 0.12}
+  heldLocalPosition: {x: -0.1, y: 0.43, z: -0.8}
   baseIntensity: 30
-  flickerAmount: 1.5
-  flickerSpeed: 6
+  flickerAmount: 3
+  flickerSpeed: 10
   flutterAmount: 0.3
   flutterSpeed: 18
 --- !u!1 &774099543
@@ -1471,6 +1470,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   uiPanel: {fileID: 774099543}
+--- !u!1 &1125549292 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7155140798900432468, guid: 88f2fd29f58b9734683512546acec310, type: 3}
+  m_PrefabInstance: {fileID: 1705856954}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1125549297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1125549292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8474e809961be584f840ebdcef4855e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShadowPlatform
+  pointLight: {fileID: 636190476}
+  shadowCaster: {fileID: 0}
+  groundObjects:
+  - {fileID: 165512565}
+  - {fileID: 242563563}
+  groundY: 0.2
+  yOffset: 0
+  samplesPerRing: 24
+  ringsPerUnit: 4
+  maxShadowDistance: 100
 --- !u!1001 &1413376446
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2136,7 +2162,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7155140798900432468, guid: 88f2fd29f58b9734683512546acec310, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1125549297}
   m_SourcePrefab: {fileID: 100100000, guid: 88f2fd29f58b9734683512546acec310, type: 3}
 --- !u!1001 &1758594969
 PrefabInstance:
