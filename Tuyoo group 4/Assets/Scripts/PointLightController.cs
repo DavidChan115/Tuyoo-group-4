@@ -8,6 +8,9 @@ public class PointLightController : MonoBehaviour
     public float flySpeed = 8f;
     public float flySnapDistance = 0.1f;
 
+    [Header("Spotlight")]
+    public Light spotLight;
+
     [Header("Flicker")]
     public float baseIntensity = 10f;
     public float flickerAmount = 1.5f;
@@ -36,6 +39,15 @@ public class PointLightController : MonoBehaviour
             HandlePickupDrop();
 
         ApplyFlicker();
+        OrientSpotlight();
+    }
+
+    void OrientSpotlight()
+    {
+        if (spotLight == null || player == null) return;
+        if (!isHeld && !isFlying) return;
+
+        spotLight.transform.rotation = Quaternion.LookRotation(player.forward, Vector3.up);
     }
 
     void FlyTowardPlayer()

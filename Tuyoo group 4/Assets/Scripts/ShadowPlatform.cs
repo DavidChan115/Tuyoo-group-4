@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class ShadowPlatform : MonoBehaviour
 {
     [Header("References")]
-    public Light pointLight;
+    public Light[] lights;
     public GameObject shadowCaster;
     public GameObject[] groundObjects;
 
@@ -56,7 +56,7 @@ public class ShadowPlatform : MonoBehaviour
 
     void Update()
     {
-        if (pointLight == null)
+        if (lights == null || lights.Length == 0)
         {
             meshCollider.enabled = false;
             debugHasShadow = false;
@@ -78,7 +78,6 @@ public class ShadowPlatform : MonoBehaviour
             return;
         }
 
-        Vector3 lightPos = pointLight.transform.position;
         float targetY = groundY + yOffset;
 
         if (!GetCylinderParams(casterFilter, shadowCaster.transform,
@@ -88,41 +87,45 @@ public class ShadowPlatform : MonoBehaviour
             return;
         }
 
-        float effectiveTop = Mathf.Min(objTopY, lightPos.y);
-        float heightRange = effectiveTop - objBottomY;
-        if (heightRange <= 0f)
-        {
-            ClearShadow();
-            return;
-        }
-
-        int ringCount = Mathf.Max(2, Mathf.CeilToInt(heightRange * ringsPerUnit));
         List<Vector2> projectedXZ = new List<Vector2>();
 
-        for (int ring = 0; ring <= ringCount; ring++)
+        foreach (Light light in lights)
         {
-            float t = (float)ring / ringCount;
-            float sampleY = objBottomY + t * heightRange;
+            if (light == null) continue;
 
-            for (int s = 0; s < samplesPerRing; s++)
+            Vector3 lightPos = light.transform.position;
+
+            float effectiveTop = Mathf.Min(objTopY, lightPos.y);
+            float heightRange = effectiveTop - objBottomY;
+            if (heightRange <= 0f) continue;
+
+            int ringCount = Mathf.Max(2, Mathf.CeilToInt(heightRange * ringsPerUnit));
+
+            for (int ring = 0; ring <= ringCount; ring++)
             {
-                float angle = (float)s / samplesPerRing * Mathf.PI * 2f;
-                Vector3 samplePoint = new Vector3(
-                    objCenterXZ.x + Mathf.Cos(angle) * objRadius,
-                    sampleY,
-                    objCenterXZ.z + Mathf.Sin(angle) * objRadius
-                );
+                float t = (float)ring / ringCount;
+                float sampleY = objBottomY + t * heightRange;
 
-                Vector3 projected = ProjectPoint(samplePoint, lightPos, targetY);
-
-                if (!float.IsInfinity(projected.x) && !float.IsNaN(projected.x))
+                for (int s = 0; s < samplesPerRing; s++)
                 {
-                    float distXZ = Vector2.Distance(
-                        new Vector2(projected.x, projected.z),
-                        new Vector2(lightPos.x, lightPos.z));
+                    float angle = (float)s / samplesPerRing * Mathf.PI * 2f;
+                    Vector3 samplePoint = new Vector3(
+                        objCenterXZ.x + Mathf.Cos(angle) * objRadius,
+                        sampleY,
+                        objCenterXZ.z + Mathf.Sin(angle) * objRadius
+                    );
 
-                    if (distXZ < maxShadowDistance)
-                        projectedXZ.Add(new Vector2(projected.x, projected.z));
+                    Vector3 projected = ProjectPoint(samplePoint, lightPos, targetY);
+
+                    if (!float.IsInfinity(projected.x) && !float.IsNaN(projected.x))
+                    {
+                        float distXZ = Vector2.Distance(
+                            new Vector2(projected.x, projected.z),
+                            new Vector2(lightPos.x, lightPos.z));
+
+                        if (distXZ < maxShadowDistance)
+                            projectedXZ.Add(new Vector2(projected.x, projected.z));
+                    }
                 }
             }
         }
@@ -141,7 +144,6 @@ public class ShadowPlatform : MonoBehaviour
             return;
         }
 
-        // Clip the hull to stay within the ground objects' XZ bounds
         if (groundObjects != null && groundObjects.Length > 0)
         {
             Rect? groundRect = GetGroundBoundsXZ();
