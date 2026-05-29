@@ -4,7 +4,6 @@ public class PointLightController : MonoBehaviour
 {
     [Header("Pickup / Drop")]
     public Transform player;
-    public float pickupRange = 3f;
     public Vector3 heldLocalPosition = new Vector3(-1.52f, 0.98f, 0.12f);
 
     [Header("Flicker")]
@@ -16,7 +15,6 @@ public class PointLightController : MonoBehaviour
 
     private new Light light;
     private bool isHeld = true;
-    private bool wasInRange = false;
     private float originalIntensity;
 
     void Start()
@@ -37,9 +35,6 @@ public class PointLightController : MonoBehaviour
     {
         if (player == null) return;
 
-        float dist = Vector3.Distance(transform.position, player.position);
-        bool inRange = dist <= pickupRange;
-
         if (Input.GetKeyDown(KeyCode.E))
         {
             if (isHeld)
@@ -48,16 +43,14 @@ public class PointLightController : MonoBehaviour
                 transform.SetParent(null);
                 isHeld = false;
             }
-            else if (inRange)
+            else
             {
-                // Pick up: re-parent to player
+                // Pick up: teleport to player, re-parent
                 transform.SetParent(player);
                 transform.localPosition = heldLocalPosition;
                 isHeld = true;
             }
         }
-
-        wasInRange = inRange;
     }
 
     void ApplyFlicker()
@@ -76,12 +69,4 @@ public class PointLightController : MonoBehaviour
         light.intensity = baseIntensity + flicker;
     }
 
-    void OnDrawGizmosSelected()
-    {
-        if (!isHeld && player != null)
-        {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(player.position, pickupRange);
-        }
-    }
 }
