@@ -8,6 +8,9 @@ public class ShadowPlatform : MonoBehaviour
     public GameObject shadowCaster;
     public GameObject[] groundObjects;
 
+    [Header("Spotlight")]
+    public bool enforceSpotCone = true;
+
     [Header("Ground Settings")]
     public float groundY = 0f;
     public float yOffset = 0.05f;
@@ -91,20 +94,23 @@ public class ShadowPlatform : MonoBehaviour
 
         foreach (Light light in lights)
         {
-            if (light == null) continue;
+            if (light == null || !light.enabled) continue;
 
             Vector3 lightPos = light.transform.position;
+            bool isSpot = light.type == LightType.Spot;
+            float halfCone = isSpot ? light.spotAngle / 2f : 180f;
+            Vector3 lightForward = light.transform.forward;
 
-            // Spotlight cone check: skip if obstacle is outside the beam
-            if (light.type == LightType.Spot)
+            // Obstacle-level cone check (optional): skip this light entirely
+            // if the obstacle isn't inside the spotlight beam
+            if (enforceSpotCone && isSpot)
             {
                 Vector3 obstacleCenter = new Vector3(objCenterXZ.x, (objBottomY + objTopY) / 2f, objCenterXZ.z);
                 Vector3 toObstacle = (obstacleCenter - lightPos).normalized;
-                float angleToObstacle = Vector3.Angle(light.transform.forward, toObstacle);
+                float angleToObstacle = Vector3.Angle(lightForward, toObstacle);
 
                 float distance = Vector3.Distance(lightPos, obstacleCenter);
                 float angularRadius = Mathf.Atan(objRadius / Mathf.Max(distance, 0.001f)) * Mathf.Rad2Deg;
-                float halfCone = light.spotAngle / 2f;
 
                 if (angleToObstacle > halfCone + angularRadius)
                     continue;
@@ -130,8 +136,14 @@ public class ShadowPlatform : MonoBehaviour
                         objCenterXZ.z + Mathf.Sin(angle) * objRadius
                     );
 
-                    // Back-face culling: skip points the light can't reach
                     Vector3 lightToSample = samplePoint - lightPos;
+
+                    // Per-sample spotlight cone filter: only project points
+                    // within the beam so the shadow follows the light direction
+                    if (isSpot && Vector3.Angle(lightForward, lightToSample) > halfCone)
+                        continue;
+
+                    // Back-face culling: skip points the light can't reach
                     Vector3 surfaceNormal = new Vector3(
                         samplePoint.x - objCenterXZ.x,
                         0f,
