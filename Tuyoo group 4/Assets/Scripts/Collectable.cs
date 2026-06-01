@@ -6,7 +6,10 @@ public class Collectable : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            Destroy(gameObject);  // 水晶消失
+            if (CollectableManager.Instance != null)
+                CollectableManager.Instance.OnCollected();
+
+            Destroy(gameObject);
             Debug.Log("收集到了水晶！");
         }
     }
