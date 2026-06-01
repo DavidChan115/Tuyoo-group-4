@@ -11,7 +11,7 @@ public class FinishTrigger : MonoBehaviour
 
     [Header("Scene")]
     [Tooltip("Name of the next level scene (must be in Build Settings).")]
-    public GameObject nextSceneName;
+    public string nextSceneName;
 
     [Header("UI")]
     [Tooltip("Optional: assign a pre-made Canvas to override the auto-created one.")]

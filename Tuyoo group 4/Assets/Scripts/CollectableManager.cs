@@ -20,7 +20,7 @@ public class CollectableManager : MonoBehaviour
         }
         Instance = this;
 
-        totalCount = FindObjectsByType<Collectable>(FindObjectsSortMode.None).Length;
+        totalCount = FindObjectsByType<Collectable>().Length;
         UpdateDisplay();
     }
 
