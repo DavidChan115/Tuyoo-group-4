@@ -857,6 +857,23 @@ Light:
   m_CorrespondingSourceObject: {fileID: 6259523967697944790, guid: 1264fde20f005134498beb2e3af2fa71, type: 3}
   m_PrefabInstance: {fileID: 7918297323746774338}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &637100100 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 169476, guid: 876e2864c3bd3544c976485da3f4c662, type: 3}
+  m_PrefabInstance: {fileID: 1586658300}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &637100105
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637100100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb21ae200d305940ba928d1220fe1b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RockGrow
 --- !u!1 &677953715
 GameObject:
   m_ObjectHideFlags: 0
@@ -1387,7 +1404,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 169476, guid: 876e2864c3bd3544c976485da3f4c662, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 637100105}
   m_SourcePrefab: {fileID: 100100000, guid: 876e2864c3bd3544c976485da3f4c662, type: 3}
 --- !u!1001 &1833022560
 PrefabInstance:
