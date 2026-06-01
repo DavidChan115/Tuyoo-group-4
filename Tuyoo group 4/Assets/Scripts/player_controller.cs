@@ -188,14 +188,14 @@ public class Test1 : MonoBehaviour
             Rigidbody hitRb = hit.attachedRigidbody;
             if (hitRb == null)
             {
-                Debug.Log("[Push] Skipping " + hit.name + " — no Rigidbody");
+                //Debug.Log("[Push] Skipping " + hit.name + " — no Rigidbody");
                 continue;
             }
 
             PushableObject pushable = hitRb.GetComponent<PushableObject>();
             if (pushable == null)
             {
-                Debug.Log("[Push] Skipping " + hit.name + " — no PushableObject component");
+                //Debug.Log("[Push] Skipping " + hit.name + " — no PushableObject component");
                 continue;
             }
 
@@ -203,7 +203,7 @@ public class Test1 : MonoBehaviour
             float dot = Vector3.Dot(transform.forward, dirToTarget);
             if (dot < 0.3f)
             {
-                Debug.Log("[Push] Skipping " + hit.name + " — behind player (dot=" + dot.ToString("F2") + ")");
+                //Debug.Log("[Push] Skipping " + hit.name + " — behind player (dot=" + dot.ToString("F2") + ")");
                 continue;
             }
 
@@ -212,7 +212,7 @@ public class Test1 : MonoBehaviour
             {
                 closestDist = dist;
                 nearestPushable = hit.gameObject;
-                Debug.Log("[Push] Found pushable: " + hit.name + " at distance " + dist.ToString("F2"));
+                //Debug.Log("[Push] Found pushable: " + hit.name + " at distance " + dist.ToString("F2"));
             }
         }
     }

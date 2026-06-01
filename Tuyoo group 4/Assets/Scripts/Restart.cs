@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class RespawnOnFall : MonoBehaviour
 {
@@ -55,12 +56,22 @@ public class RespawnOnFall : MonoBehaviour
         deathCanvas.SetActive(true);
     }
 
+
+    public void RestartScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+
     public void TryAgain()
     {
         if (deadPlayer == null) return;
 
-        deadPlayer.transform.position = initialPosition;
-        deadPlayer.transform.rotation = initialRotation;
+        //deadPlayer.transform.position = initialPosition;
+        //deadPlayer.transform.rotation = initialRotation;
+        RestartScene();
+
+
 
         Test1 controller = deadPlayer.GetComponent<Test1>();
         if (controller != null) controller.enabled = true;
@@ -79,6 +90,7 @@ public class RespawnOnFall : MonoBehaviour
         deathCanvas.SetActive(false);
         isDead = false;
     }
+
 
     void SetupDeathUI()
     {
