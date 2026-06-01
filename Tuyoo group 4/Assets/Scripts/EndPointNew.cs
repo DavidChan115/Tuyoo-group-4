@@ -53,6 +53,9 @@ public class FinishTrigger : MonoBehaviour
             triggered = true;
             EndpointReached = true;
 
+            PlayerPrefs.DeleteKey("LastLevel");
+            PlayerPrefs.Save();
+
             Test1 controller = other.GetComponent<Test1>();
             if (controller != null) controller.enabled = false;
 
