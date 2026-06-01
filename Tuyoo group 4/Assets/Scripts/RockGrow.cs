@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class RockGrow : MonoBehaviour
 {
+    [Header("Time Control")]
+    [Tooltip("How many seconds the growth takes. Matches the ending cinematic duration by default.")]
+    [SerializeField] private float growDuration = 2f;
+
     private Vector3 fullScale;
     private bool growing;
     private float growStartTime;
@@ -27,8 +31,7 @@ public class RockGrow : MonoBehaviour
             growing = true;
             growStartTime = Time.time;
 
-            SaturationController sat = FindObjectOfType<SaturationController>();
-            currentDuration = sat != null ? sat.transitionDuration : 2f;
+            currentDuration = growDuration;
         }
     }
 

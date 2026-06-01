@@ -874,6 +874,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb21ae200d305940ba928d1220fe1b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RockGrow
+  growDuration: 1
 --- !u!1 &677953715
 GameObject:
   m_ObjectHideFlags: 0
