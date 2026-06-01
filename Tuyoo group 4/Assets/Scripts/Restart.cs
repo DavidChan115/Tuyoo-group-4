@@ -7,6 +7,8 @@ using TMPro;
 
 public class RespawnOnFall : MonoBehaviour
 {
+    public static bool DeathScreenActive { get; private set; }
+
     public Transform respawnPoint;
 
     [Tooltip("Optional: drag a pre-made Canvas prefab here to override the default death UI.")]
@@ -54,6 +56,7 @@ public class RespawnOnFall : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
+        DeathScreenActive = true;
         deathCanvas.SetActive(true);
     }
 
@@ -96,6 +99,7 @@ public class RespawnOnFall : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
+        DeathScreenActive = false;
         deathCanvas.SetActive(false);
         isDead = false;
     }
