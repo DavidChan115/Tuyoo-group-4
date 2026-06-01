@@ -10,26 +10,40 @@ public class FinishTrigger : MonoBehaviour
     public static bool EndpointReached { get; private set; }
 
     [Header("Scene")]
-    [Tooltip("Name of the next level scene (must be in Build Settings).")]
-    public string nextSceneName;
+    [Tooltip("Drag the next scene asset here.")]
+    public Object nextScene;
 
     [Header("UI")]
     [Tooltip("Optional: assign a pre-made Canvas to override the auto-created one.")]
-    public GameObject uiPanel;
+    [SerializeField] public GameObject uiPanel;
 
     private GameObject finishCanvas;
     private bool triggered;
 
     void Start()
     {
+        EndpointReached = false;
+
         if (uiPanel != null)
         {
             finishCanvas = uiPanel;
+            WireButtons();
         }
         else
         {
             BuildFinishUI();
         }
+
+        finishCanvas.SetActive(false);
+    }
+
+    void WireButtons()
+    {
+        Button retryBtn = finishCanvas.transform.Find("RetryButton")?.GetComponent<Button>();
+        if (retryBtn != null) retryBtn.onClick.AddListener(Retry);
+
+        Button nextBtn = finishCanvas.transform.Find("NextLevelButton")?.GetComponent<Button>();
+        if (nextBtn != null) nextBtn.onClick.AddListener(NextLevel);
     }
 
     void OnTriggerEnter(Collider other)
@@ -38,6 +52,9 @@ public class FinishTrigger : MonoBehaviour
         {
             triggered = true;
             EndpointReached = true;
+
+            PlayerPrefs.DeleteKey("LastLevel");
+            PlayerPrefs.Save();
 
             Test1 controller = other.GetComponent<Test1>();
             if (controller != null) controller.enabled = false;
@@ -64,7 +81,8 @@ public class FinishTrigger : MonoBehaviour
 
     public void NextLevel()
     {
-        SceneManager.LoadScene(nextSceneName);
+        if (nextScene != null)
+            SceneManager.LoadScene(nextScene.name);
     }
 
     void BuildFinishUI()
@@ -108,8 +126,6 @@ public class FinishTrigger : MonoBehaviour
 
         // Next Level button
         BuildButton(panel.transform, "NextLevelButton", "Next Level", new Vector2(110, -40), NextLevel);
-
-        finishCanvas.SetActive(false);
     }
 
     void BuildButton(Transform parent, string name, string label, Vector2 position, UnityAction action)

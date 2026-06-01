@@ -1,8 +1,9 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
-using UnityEngine.SceneManagement;
 
 public class RespawnOnFall : MonoBehaviour
 {
@@ -62,6 +63,14 @@ public class RespawnOnFall : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
+    public void ExitGame()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
 
     public void TryAgain()
     {
@@ -98,12 +107,18 @@ public class RespawnOnFall : MonoBehaviour
 
         if (deathUIPrefab != null)
         {
-            deathCanvas = Instantiate(deathUIPrefab);
-            deathCanvas.name = "DeathCanvas";
+            // If it's already in the scene, use it directly; otherwise instantiate the prefab
+            if (deathUIPrefab.scene.name != null)
+            {
+                deathCanvas = deathUIPrefab;
+            }
+            else
+            {
+                deathCanvas = Instantiate(deathUIPrefab);
+                deathCanvas.name = "DeathCanvas";
+            }
 
-            Button tryAgainButton = deathCanvas.GetComponentInChildren<Button>();
-            if (tryAgainButton != null)
-                tryAgainButton.onClick.AddListener(TryAgain);
+            WireDeathButtons(deathCanvas);
         }
         else
         {
@@ -111,6 +126,17 @@ public class RespawnOnFall : MonoBehaviour
         }
 
         deathCanvas.SetActive(false);
+    }
+
+    void WireDeathButtons(GameObject canvas)
+    {
+        Transform tryAgain = canvas.transform.Find("TryAgainButton");
+        if (tryAgain != null)
+            tryAgain.GetComponent<Button>()?.onClick.AddListener(TryAgain);
+
+        Transform exitGame = canvas.transform.Find("ExitGameButton");
+        if (exitGame != null)
+            exitGame.GetComponent<Button>()?.onClick.AddListener(ExitGame);
     }
 
     void EnsureEventSystem()
@@ -154,8 +180,14 @@ public class RespawnOnFall : MonoBehaviour
         textRect.sizeDelta = new Vector2(400, 100);
         textRect.anchoredPosition = new Vector2(0, 60);
 
-        GameObject buttonObj = new GameObject("TryAgainButton");
-        buttonObj.transform.SetParent(panel.transform, false);
+        BuildDeathButton(panel.transform, "TryAgainButton", "Try Again", new Vector2(0, -10), TryAgain);
+        BuildDeathButton(panel.transform, "ExitGameButton", "Exit Game", new Vector2(0, -90), ExitGame);
+    }
+
+    void BuildDeathButton(Transform parent, string name, string label, Vector2 position, UnityAction action)
+    {
+        GameObject buttonObj = new GameObject(name);
+        buttonObj.transform.SetParent(parent, false);
         Button button = buttonObj.AddComponent<Button>();
         Image buttonImage = buttonObj.AddComponent<Image>();
         buttonImage.color = Color.white;
@@ -163,12 +195,12 @@ public class RespawnOnFall : MonoBehaviour
         buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
         buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
         buttonRect.sizeDelta = new Vector2(200, 60);
-        buttonRect.anchoredPosition = new Vector2(0, -40);
+        buttonRect.anchoredPosition = position;
 
         GameObject buttonTextObj = new GameObject("ButtonText");
         buttonTextObj.transform.SetParent(buttonObj.transform, false);
         TextMeshProUGUI buttonText = buttonTextObj.AddComponent<TextMeshProUGUI>();
-        buttonText.text = "Try Again";
+        buttonText.text = label;
         buttonText.fontSize = 28;
         buttonText.alignment = TextAlignmentOptions.Center;
         buttonText.color = Color.black;
@@ -177,6 +209,6 @@ public class RespawnOnFall : MonoBehaviour
         buttonTextRect.anchorMax = Vector2.one;
         buttonTextRect.sizeDelta = Vector2.zero;
 
-        button.onClick.AddListener(TryAgain);
+        button.onClick.AddListener(action);
     }
 }

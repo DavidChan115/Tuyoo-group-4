@@ -7,6 +7,7 @@ public class ShadowPlatform : MonoBehaviour
     public Light[] lights;
     public GameObject shadowCaster;
     public GameObject[] groundObjects;
+    public Material shadowMaterial;
 
     [Header("Spotlight")]
     public bool enforceSpotCone = true;
@@ -46,11 +47,19 @@ public class ShadowPlatform : MonoBehaviour
 
         meshRenderer = platformChild.AddComponent<MeshRenderer>();
         meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-        if (shader == null) shader = Shader.Find("Unlit/Color");
-        Material mat = new Material(shader);
-        mat.color = new Color(0, 0, 0, 0.5f);
-        meshRenderer.material = mat;
+
+        if (shadowMaterial != null)
+        {
+            meshRenderer.material = shadowMaterial;
+        }
+        else
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            Material mat = new Material(shader);
+            mat.color = new Color(0, 0, 0, 0.5f);
+            meshRenderer.material = mat;
+        }
 
         meshCollider = platformChild.AddComponent<MeshCollider>();
         meshCollider.convex = true;
