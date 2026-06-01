@@ -4,6 +4,10 @@ using UnityEngine.Rendering.Universal;
 
 public class SaturationController : MonoBehaviour
 {
+    [Tooltip("Starting saturation. -100 = full B&W, 0 = full color, -50 = muted.")]
+    [Range(-100, 0)]
+    [SerializeField]public float startSaturation = -80f;
+
     [Tooltip("Seconds to transition from B&W to full color.")]
     public float transitionDuration = 2f;
 
@@ -19,7 +23,7 @@ public class SaturationController : MonoBehaviour
             if (!volume.profile.TryGet(out colorAdjustments))
                 colorAdjustments = volume.profile.Add<ColorAdjustments>(true);
 
-            colorAdjustments.saturation.value = -100f;
+            colorAdjustments.saturation.value = startSaturation;
         }
     }
 
@@ -46,6 +50,6 @@ public class SaturationController : MonoBehaviour
         float elapsed = Time.time - transitionStartTime;
         float t = Mathf.Clamp01(elapsed / transitionDuration);
 
-        colorAdjustments.saturation.value = Mathf.Lerp(-100f, 0f, t);
+        colorAdjustments.saturation.value = Mathf.Lerp(startSaturation, 0f, t);
     }
 }
