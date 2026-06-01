@@ -70,7 +70,14 @@ public class FinishTrigger : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            finishCanvas.SetActive(true);
+            // UI activation is now handled by EndingCinematicManager after the camera transition completes.
+            // finishCanvas.SetActive(true);
+
+            if (EndingCinematicManager.Instance != null)
+            {
+                EndingCinematicManager.Instance.endUIPanel = finishCanvas;
+                EndingCinematicManager.Instance.PlayEndingCinematic();
+            }
         }
     }
 
