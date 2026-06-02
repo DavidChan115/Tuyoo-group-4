@@ -106,20 +106,23 @@ public class ShadowPlatform : MonoBehaviour
             if (light == null || !light.enabled) continue;
 
             Vector3 lightPos = light.transform.position;
+
+            Vector3 obstacleCenter = new Vector3(objCenterXZ.x, (objBottomY + objTopY) / 2f, objCenterXZ.z);
+            float distanceToObstacle = Vector3.Distance(lightPos, obstacleCenter);
+            if (distanceToObstacle - objRadius > light.range)
+                continue;
+
             bool isSpot = light.type == LightType.Spot;
             float halfCone = isSpot ? light.spotAngle / 2f : 180f;
             Vector3 lightForward = light.transform.forward;
 
-            // Obstacle-level cone check (optional): skip this light entirely
+            // Obstacle-level cone check: skip this light entirely
             // if the obstacle isn't inside the spotlight beam
             if (enforceSpotCone && isSpot)
             {
-                Vector3 obstacleCenter = new Vector3(objCenterXZ.x, (objBottomY + objTopY) / 2f, objCenterXZ.z);
                 Vector3 toObstacle = (obstacleCenter - lightPos).normalized;
                 float angleToObstacle = Vector3.Angle(lightForward, toObstacle);
-
-                float distance = Vector3.Distance(lightPos, obstacleCenter);
-                float angularRadius = Mathf.Atan(objRadius / Mathf.Max(distance, 0.001f)) * Mathf.Rad2Deg;
+                float angularRadius = Mathf.Atan(objRadius / Mathf.Max(distanceToObstacle, 0.001f)) * Mathf.Rad2Deg;
 
                 if (angleToObstacle > halfCone + angularRadius)
                     continue;
