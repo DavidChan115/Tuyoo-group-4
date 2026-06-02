@@ -34,7 +34,7 @@ public class SaturationController : MonoBehaviour
         bool allCollected = CollectableManager.Instance != null
                          && CollectableManager.Instance.AllCollected();
 
-        bool endpointReached = FinishTrigger.EndpointReached;
+        bool endpointReached = EndPointNew.EndpointReached;
 
         if (allCollected && endpointReached)
         {

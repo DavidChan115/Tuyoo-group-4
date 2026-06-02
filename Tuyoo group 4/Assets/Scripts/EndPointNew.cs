@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
-public class FinishTrigger : MonoBehaviour
+public class EndPointNew : MonoBehaviour
 {
     public static bool EndpointReached { get; private set; }
 
@@ -112,7 +112,6 @@ public class FinishTrigger : MonoBehaviour
         panelRect.anchorMax = Vector2.one;
         panelRect.sizeDelta = Vector2.zero;
 
-        // Title text
         GameObject textObj = new GameObject("FinishText");
         textObj.transform.SetParent(panel.transform, false);
         TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
@@ -128,10 +127,7 @@ public class FinishTrigger : MonoBehaviour
         textRect.sizeDelta = new Vector2(600, 100);
         textRect.anchoredPosition = new Vector2(0, 80);
 
-        // Retry button
         BuildButton(panel.transform, "RetryButton", "Retry", new Vector2(-110, -40), Retry);
-
-        // Next Level button
         BuildButton(panel.transform, "NextLevelButton", "Next Level", new Vector2(110, -40), NextLevel);
     }
 
