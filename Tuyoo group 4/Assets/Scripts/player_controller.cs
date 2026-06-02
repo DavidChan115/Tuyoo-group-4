@@ -13,7 +13,7 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Slowest the player can go while pushing, as a fraction of base speed")]
     public float pushMinSpeedMultiplier = 0.2f;
     public float pushDetectionRadius = 2.5f;
-    public float pushPlaceDistance = 1.5f;
+    public float pushPlaceDistance = 0.7f;
     public LayerMask pushableMask = ~0;
 
     private Rigidbody rb;
@@ -30,7 +30,6 @@ public class PlayerController : MonoBehaviour
     private bool isPushing;
     private GameObject pushedObject;
     private Rigidbody pushedRb;
-    private Transform holdPoint;
     private GameObject nearestPushable;
     private int debugFrameCounter;
 
@@ -43,12 +42,6 @@ public class PlayerController : MonoBehaviour
                        ?? GetComponentInChildren<SkinnedMeshRenderer>()?.transform;
         visualModel = found != null ? found : transform;
         rb.centerOfMass = Vector3.zero;
-
-        GameObject holder = new GameObject("HoldPoint");
-        holder.transform.SetParent(transform);
-        holder.transform.localPosition = Vector3.zero;
-        holder.transform.localRotation = Quaternion.identity;
-        holdPoint = holder.transform;
 
         Collider col = GetComponent<Collider>();
         if (col != null)
@@ -129,21 +122,17 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        holdPoint.position = visualModel.position;
-        holdPoint.rotation = visualModel.rotation;
-
         if (moveInput.sqrMagnitude > 0.01f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(moveInput.x, 0f, moveInput.z));
-            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime));
-
-            float currentSpeed = moveSpeed;
+            float massFactor = 1f;
             if (isPushing && pushedRb != null)
-            {
-                float mass = pushedRb.mass;
-                float factor = Mathf.Clamp(1f - (mass * pushMassFactor), pushMinSpeedMultiplier, 1f);
-                currentSpeed = moveSpeed * factor;
-            }
+                massFactor = Mathf.Clamp(1f - (pushedRb.mass * pushMassFactor), pushMinSpeedMultiplier, 1f);
+
+            float currentRotationSpeed = rotationSpeed * massFactor;
+            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(moveInput.x, 0f, moveInput.z));
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, currentRotationSpeed * Time.fixedDeltaTime));
+
+            float currentSpeed = moveSpeed * massFactor;
             Vector3 targetHVel = new Vector3(moveInput.x, 0f, moveInput.z) * currentSpeed;
             Vector3 currentHVel = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
             Vector3 deltaV = targetHVel - currentHVel;
@@ -160,6 +149,13 @@ public class PlayerController : MonoBehaviour
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
             rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             jumpPressed = false;
+        }
+
+        if (isPushing && pushedRb != null)
+        {
+            Vector3 targetPos = transform.position + visualModel.forward * pushPlaceDistance;
+            targetPos.y = pushedRb.position.y;
+            pushedRb.MovePosition(targetPos);
         }
 
         debugFrameCounter++;
@@ -217,19 +213,12 @@ public class PlayerController : MonoBehaviour
         pushedObject = obj;
         pushedRb = obj.GetComponent<Rigidbody>();
 
-        holdPoint.localPosition = Vector3.forward * pushPlaceDistance;
-        holdPoint.localRotation = Quaternion.identity;
-
         if (pushedRb != null)
         {
             pushedRb.isKinematic = true;
             pushedRb.linearVelocity = Vector3.zero;
             pushedRb.angularVelocity = Vector3.zero;
         }
-
-        obj.transform.SetParent(holdPoint);
-        obj.transform.localPosition = Vector3.zero;
-        obj.transform.localRotation = Quaternion.identity;
 
         Collider[] playerCols = GetComponentsInChildren<Collider>();
         Collider[] objCols = obj.GetComponentsInChildren<Collider>();
@@ -242,21 +231,15 @@ public class PlayerController : MonoBehaviour
     {
         if (pushedObject != null)
         {
-            pushedObject.transform.position += visualModel.forward * 0.5f;
-
             Collider[] playerCols = GetComponentsInChildren<Collider>();
             Collider[] objCols = pushedObject.GetComponentsInChildren<Collider>();
             foreach (Collider pc in playerCols)
                 foreach (Collider oc in objCols)
                     Physics.IgnoreCollision(pc, oc, false);
 
-            pushedObject.transform.SetParent(null);
-            holdPoint.localPosition = Vector3.zero;
-
             if (pushedRb != null)
             {
-                pushedRb.isKinematic = false;
-                pushedRb.useGravity = true;
+                pushedRb.isKinematic = true;
                 pushedRb.linearVelocity = Vector3.zero;
                 pushedRb.angularVelocity = Vector3.zero;
             }

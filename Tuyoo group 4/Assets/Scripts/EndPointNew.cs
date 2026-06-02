@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
-public class EndPointNew : MonoBehaviour
+public class FinishTrigger : MonoBehaviour
 {
     public static bool EndpointReached { get; private set; }
 
