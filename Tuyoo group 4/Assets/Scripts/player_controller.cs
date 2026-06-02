@@ -1,10 +1,11 @@
 using UnityEngine;
 
-public class Test1 : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     public float moveSpeed = 5f;
     public float jumpForce = 5f;
+    public float rotationSpeed = 12f;
 
     [Header("Push/Pull")]
     [Tooltip("How much each unit of mass slows the player. Speed = base * clamp(1 - mass*factor, min, 1)")]
@@ -15,33 +16,40 @@ public class Test1 : MonoBehaviour
     public float pushPlaceDistance = 1.5f;
     public LayerMask pushableMask = ~0;
 
-    [Header("Camera")]
-    public Transform playerCamera;
-    public float mouseSensitivity = 2f;
-
     private Rigidbody rb;
     private bool isGrounded;
     private bool jumpPressed;
-    private float yaw;
-    private float horizontalDist;
-    private float cameraHeight;
+    private Transform visualModel;
 
     public float groundCheckDistance = 1.1f;
     public LayerMask groundMask = ~0;
 
     private Vector3 moveInput;
+    private Camera cachedCamera;
 
     private bool isPushing;
     private GameObject pushedObject;
-    private FixedJoint pushJoint;
+    private Rigidbody pushedRb;
+    private Transform holdPoint;
     private GameObject nearestPushable;
+    private int debugFrameCounter;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        Transform found = GetComponentInChildren<MeshRenderer>()?.transform
+                       ?? GetComponentInChildren<SkinnedMeshRenderer>()?.transform;
+        visualModel = found != null ? found : transform;
+        rb.centerOfMass = Vector3.zero;
 
-        // Zero-friction material so player slides along walls instead of sticking
+        GameObject holder = new GameObject("HoldPoint");
+        holder.transform.SetParent(transform);
+        holder.transform.localPosition = Vector3.zero;
+        holder.transform.localRotation = Quaternion.identity;
+        holdPoint = holder.transform;
+
         Collider col = GetComponent<Collider>();
         if (col != null)
         {
@@ -52,17 +60,10 @@ public class Test1 : MonoBehaviour
             col.material = zeroFriction;
         }
 
-        if (playerCamera == null)
-            playerCamera = GetComponentInChildren<Camera>()?.transform;
+        cachedCamera = FindObjectOfType<Camera>();
 
-        // Read initial camera offset relative to player
-        Vector3 offset = playerCamera.position - transform.position;
-        cameraHeight = offset.y;
-        horizontalDist = new Vector2(offset.x, offset.z).magnitude;
-
-        // Set player facing direction to match camera's horizontal position
-        yaw = Mathf.Atan2(offset.x, offset.z) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        if (cachedCamera == null)
+            Debug.LogError("[PlayerController] No camera found in scene. Camera-relative movement will not work.");
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -72,18 +73,16 @@ public class Test1 : MonoBehaviour
 
     void Update()
     {
-        // --- Mouse rotates player body ---
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        yaw += mouseX;
-
-        // --- Camera-relative movement ---
         float horizontalInput = Input.GetAxis("Horizontal");
         float verticalInput = Input.GetAxis("Vertical");
 
-        if (playerCamera != null)
+        if (Mathf.Abs(horizontalInput) < 0.1f) horizontalInput = 0f;
+        if (Mathf.Abs(verticalInput) < 0.1f) verticalInput = 0f;
+
+        if (cachedCamera != null)
         {
-            Vector3 camForward = playerCamera.forward;
-            Vector3 camRight = playerCamera.right;
+            Vector3 camForward = cachedCamera.transform.forward;
+            Vector3 camRight = cachedCamera.transform.right;
             camForward.y = 0f;
             camRight.y = 0f;
             camForward.Normalize();
@@ -130,24 +129,31 @@ public class Test1 : MonoBehaviour
 
     void FixedUpdate()
     {
-        // Rotate player body
-        rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
+        holdPoint.position = visualModel.position;
+        holdPoint.rotation = visualModel.rotation;
 
-        // Use AddForce instead of directly setting velocity —
-        // lets the physics engine handle collision response naturally
-        float currentSpeed = moveSpeed;
-        if (isPushing && pushedObject != null)
+        if (moveInput.sqrMagnitude > 0.01f)
         {
-            Rigidbody obstacleRb = pushedObject.GetComponent<Rigidbody>();
-            float mass = obstacleRb != null ? obstacleRb.mass : 1f;
-            float factor = Mathf.Clamp(1f - (mass * pushMassFactor), pushMinSpeedMultiplier, 1f);
-            currentSpeed = moveSpeed * factor;
-        }
-        Vector3 targetHVel = new Vector3(moveInput.x, 0f, moveInput.z) * currentSpeed;
-        Vector3 currentHVel = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-        Vector3 deltaV = targetHVel - currentHVel;
+            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(moveInput.x, 0f, moveInput.z));
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime));
 
-        rb.AddForce(deltaV, ForceMode.VelocityChange);
+            float currentSpeed = moveSpeed;
+            if (isPushing && pushedRb != null)
+            {
+                float mass = pushedRb.mass;
+                float factor = Mathf.Clamp(1f - (mass * pushMassFactor), pushMinSpeedMultiplier, 1f);
+                currentSpeed = moveSpeed * factor;
+            }
+            Vector3 targetHVel = new Vector3(moveInput.x, 0f, moveInput.z) * currentSpeed;
+            Vector3 currentHVel = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+            Vector3 deltaV = targetHVel - currentHVel;
+
+            rb.AddForce(deltaV, ForceMode.VelocityChange);
+        }
+        else if (isGrounded)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        }
 
         if (jumpPressed)
         {
@@ -155,16 +161,17 @@ public class Test1 : MonoBehaviour
             rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             jumpPressed = false;
         }
-    }
 
-    void LateUpdate()
-    {
-        // Camera always behind the player, looking at them
-        if (playerCamera != null)
+        debugFrameCounter++;
+        if (debugFrameCounter % 60 == 0 || rb.angularVelocity.sqrMagnitude > 0.001f)
         {
-            Vector3 behind = transform.position - transform.forward * horizontalDist + Vector3.up * cameraHeight;
-            playerCamera.position = behind;
-            playerCamera.LookAt(transform.position);
+            Debug.Log("[RotationDebug] frame=" + debugFrameCounter
+                + " moveInput.magnitude=" + moveInput.magnitude.ToString("F4")
+                + " angularVelocity=" + rb.angularVelocity.ToString("F4")
+                + " |angularVelocity|=" + rb.angularVelocity.magnitude.ToString("F4")
+                + " rotation.yaw=" + rb.rotation.eulerAngles.y.ToString("F2")
+                + " isGrounded=" + isGrounded
+                + " constraints=" + rb.constraints);
         }
     }
 
@@ -186,33 +193,20 @@ public class Test1 : MonoBehaviour
             if (hit.gameObject == gameObject) continue;
 
             Rigidbody hitRb = hit.attachedRigidbody;
-            if (hitRb == null)
-            {
-                //Debug.Log("[Push] Skipping " + hit.name + " — no Rigidbody");
-                continue;
-            }
+            if (hitRb == null) continue;
 
             PushableObject pushable = hitRb.GetComponent<PushableObject>();
-            if (pushable == null)
-            {
-                //Debug.Log("[Push] Skipping " + hit.name + " — no PushableObject component");
-                continue;
-            }
+            if (pushable == null) continue;
 
             Vector3 dirToTarget = (hit.transform.position - transform.position).normalized;
-            float dot = Vector3.Dot(transform.forward, dirToTarget);
-            if (dot < 0.3f)
-            {
-                //Debug.Log("[Push] Skipping " + hit.name + " — behind player (dot=" + dot.ToString("F2") + ")");
-                continue;
-            }
+            float dot = Vector3.Dot(visualModel.forward, dirToTarget);
+            if (dot < 0.3f) continue;
 
             float dist = Vector3.Distance(transform.position, hit.transform.position);
             if (dist < closestDist)
             {
                 closestDist = dist;
                 nearestPushable = hit.gameObject;
-                //Debug.Log("[Push] Found pushable: " + hit.name + " at distance " + dist.ToString("F2"));
             }
         }
     }
@@ -221,50 +215,56 @@ public class Test1 : MonoBehaviour
     {
         isPushing = true;
         pushedObject = obj;
+        pushedRb = obj.GetComponent<Rigidbody>();
 
-        Vector3 targetPos = transform.position + transform.forward * pushPlaceDistance;
-        targetPos.y = obj.transform.position.y;
-        obj.transform.position = targetPos;
+        holdPoint.localPosition = Vector3.forward * pushPlaceDistance;
+        holdPoint.localRotation = Quaternion.identity;
 
-        Rigidbody obstacleRb = obj.GetComponent<Rigidbody>();
-        if (obstacleRb != null)
+        if (pushedRb != null)
         {
-            obstacleRb.isKinematic = false;
-            obstacleRb.linearVelocity = Vector3.zero;
+            pushedRb.isKinematic = true;
+            pushedRb.linearVelocity = Vector3.zero;
+            pushedRb.angularVelocity = Vector3.zero;
         }
 
-        pushJoint = gameObject.AddComponent<FixedJoint>();
-        pushJoint.connectedBody = obstacleRb;
-        pushJoint.breakForce = Mathf.Infinity;
-        pushJoint.breakTorque = Mathf.Infinity;
+        obj.transform.SetParent(holdPoint);
+        obj.transform.localPosition = Vector3.zero;
+        obj.transform.localRotation = Quaternion.identity;
+
+        Collider[] playerCols = GetComponentsInChildren<Collider>();
+        Collider[] objCols = obj.GetComponentsInChildren<Collider>();
+        foreach (Collider pc in playerCols)
+            foreach (Collider oc in objCols)
+                Physics.IgnoreCollision(pc, oc, true);
     }
 
     void ReleaseObstacle()
     {
         if (pushedObject != null)
         {
-            Rigidbody obstacleRb = pushedObject.GetComponent<Rigidbody>();
-            if (obstacleRb != null)
+            pushedObject.transform.position += visualModel.forward * 0.5f;
+
+            Collider[] playerCols = GetComponentsInChildren<Collider>();
+            Collider[] objCols = pushedObject.GetComponentsInChildren<Collider>();
+            foreach (Collider pc in playerCols)
+                foreach (Collider oc in objCols)
+                    Physics.IgnoreCollision(pc, oc, false);
+
+            pushedObject.transform.SetParent(null);
+            holdPoint.localPosition = Vector3.zero;
+
+            if (pushedRb != null)
             {
-                obstacleRb.isKinematic = true;
-                obstacleRb.linearVelocity = Vector3.zero;
+                pushedRb.isKinematic = false;
+                pushedRb.useGravity = true;
+                pushedRb.linearVelocity = Vector3.zero;
+                pushedRb.angularVelocity = Vector3.zero;
             }
         }
 
         isPushing = false;
         pushedObject = null;
-
-        if (pushJoint != null)
-        {
-            Destroy(pushJoint);
-            pushJoint = null;
-        }
-    }
-
-    void OnDestroy()
-    {
-        if (pushJoint != null)
-            Destroy(pushJoint);
+        pushedRb = null;
     }
 
     void OnDrawGizmosSelected()

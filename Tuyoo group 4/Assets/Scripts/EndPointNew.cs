@@ -56,7 +56,7 @@ public class FinishTrigger : MonoBehaviour
             PlayerPrefs.DeleteKey("LastLevel");
             PlayerPrefs.Save();
 
-            Test1 controller = other.GetComponent<Test1>();
+            PlayerController controller = other.GetComponent<PlayerController>();
             if (controller != null) controller.enabled = false;
 
             Rigidbody rb = other.GetComponent<Rigidbody>();

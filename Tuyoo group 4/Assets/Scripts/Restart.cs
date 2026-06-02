@@ -42,7 +42,7 @@ public class RespawnOnFall : MonoBehaviour
         isDead = true;
         deadPlayer = player;
 
-        Test1 controller = player.GetComponent<Test1>();
+        PlayerController controller = player.GetComponent<PlayerController>();
         if (controller != null) controller.enabled = false;
 
         Rigidbody rb = player.GetComponent<Rigidbody>();
@@ -85,7 +85,7 @@ public class RespawnOnFall : MonoBehaviour
 
 
 
-        Test1 controller = deadPlayer.GetComponent<Test1>();
+        PlayerController controller = deadPlayer.GetComponent<PlayerController>();
         if (controller != null) controller.enabled = true;
 
         Rigidbody rb = deadPlayer.GetComponent<Rigidbody>();

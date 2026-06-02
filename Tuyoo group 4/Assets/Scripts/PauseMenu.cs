@@ -12,7 +12,7 @@ public class PauseMenu : MonoBehaviour
 
     private GameObject pauseCanvas;
     private bool isPaused;
-    private Test1 playerController;
+    private PlayerController playerController;
     private Rigidbody playerRb;
     private CursorLockMode savedLockMode;
     private bool savedCursorVisible;
@@ -49,7 +49,7 @@ public class PauseMenu : MonoBehaviour
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
-            playerController = player.GetComponent<Test1>();
+            playerController = player.GetComponent<PlayerController>();
             if (playerController != null) playerController.enabled = false;
 
             playerRb = player.GetComponent<Rigidbody>();

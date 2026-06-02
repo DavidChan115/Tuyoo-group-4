@@ -74,18 +74,29 @@ public class EndingCinematicManager : MonoBehaviour
             Debug.Log("[Cinematic] End UI panel hidden until transition completes.");
         }
 
-        Test1 playerController = FindObjectOfType<Test1>();
+        PlayerController playerController = FindObjectOfType<PlayerController>();
         if (playerController != null)
         {
             playerController.enabled = false;
-            Debug.Log("[Cinematic] Disabled Test1 on " + playerController.name);
+            Debug.Log("[Cinematic] Disabled PlayerController on " + playerController.name);
         }
         else
         {
-            Debug.Log("[Cinematic] Test1 not found via FindObjectOfType (may already be disabled).");
+            Debug.Log("[Cinematic] PlayerController not found via FindObjectOfType (may already be disabled).");
         }
 
         cam.transform.SetParent(null);
+
+        Behaviour brain = cam.GetComponent("CinemachineBrain") as Behaviour;
+        if (brain != null)
+        {
+            brain.enabled = false;
+            Debug.Log("[Cinematic] Disabled CinemachineBrain on camera.");
+        }
+        else
+        {
+            Debug.LogWarning("[Cinematic] No CinemachineBrain found on camera — if a Cinemachine virtual camera is active it may fight this transition.");
+        }
 
         Vector3 startPosition = cam.transform.position;
         Quaternion startRotation = cam.transform.rotation;
