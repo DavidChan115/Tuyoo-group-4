@@ -263,7 +263,7 @@ MonoBehaviour:
   yOffset: 0.05
   samplesPerRing: 24
   ringsPerUnit: 4
-  maxShadowDistance: 25
+  maxShadowDistance: 30
   shadowNearOpacity: 0.288
   shadowFarOpacity: 0
 --- !u!114 &14829855
@@ -724,7 +724,7 @@ PrefabInstance:
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
       propertyPath: nextScene
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 102900000, guid: 41ad27e2e0176b543bbf0b453b47440f, type: 3}
     - target: {fileID: 4152915968659535330, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
       propertyPath: m_LocalPosition.x
       value: 40.79

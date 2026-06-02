@@ -775,16 +775,11 @@ MonoBehaviour:
   enforceSpotCone: 0
   groundY: 0.2
   yOffset: 0
-  groundLayerMask:
-    serializedVersion: 2
-    m_Bits: 64
-  raycastStartHeight: 100
   samplesPerRing: 24
   ringsPerUnit: 4
   maxShadowDistance: 50
   shadowNearOpacity: 0.6
   shadowFarOpacity: 0
-  cliffMargin: 0.3
 --- !u!65 &656312506
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -921,16 +916,11 @@ MonoBehaviour:
   enforceSpotCone: 0
   groundY: 0.2
   yOffset: 0
-  groundLayerMask:
-    serializedVersion: 2
-    m_Bits: 64
-  raycastStartHeight: 100
   samplesPerRing: 24
   ringsPerUnit: 4
   maxShadowDistance: 50
   shadowNearOpacity: 0.6
   shadowFarOpacity: 0
-  cliffMargin: 0.3
 --- !u!65 &712521836
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1798,16 +1788,11 @@ MonoBehaviour:
   enforceSpotCone: 0
   groundY: 0
   yOffset: 0.05
-  groundLayerMask:
-    serializedVersion: 2
-    m_Bits: 64
-  raycastStartHeight: 100
   samplesPerRing: 24
   ringsPerUnit: 4
   maxShadowDistance: 50
   shadowNearOpacity: 0.6
   shadowFarOpacity: 0.5
-  cliffMargin: 0.3
 --- !u!1001 &1291374918
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1964,7 +1949,7 @@ PrefabInstance:
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
       propertyPath: nextScene
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 102900000, guid: 23029d95394b4334bad9ccb27656a8ae, type: 3}
     - target: {fileID: 4152915968659535330, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
       propertyPath: m_LocalPosition.x
       value: 15.628
