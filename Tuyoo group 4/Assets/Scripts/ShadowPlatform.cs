@@ -23,6 +23,12 @@ public class ShadowPlatform : MonoBehaviour
     [Header("Limits")]
     public float maxShadowDistance = 50f;
 
+    [Header("Fade")]
+    [Range(0f, 1f)]
+    public float shadowNearOpacity = 0.6f;
+    [Range(0f, 1f)]
+    public float shadowFarOpacity = 0f;
+
     private GameObject platformChild;
     private Mesh shadowMesh;
     private MeshCollider meshCollider;
@@ -32,6 +38,8 @@ public class ShadowPlatform : MonoBehaviour
     private List<Vector2> debugHull = new List<Vector2>();
     private float debugTargetY;
     private bool debugHasShadow;
+    private Vector2 obstacleCenterXZ;
+    private float shadowHeight;
 
     void Start()
     {
@@ -54,15 +62,16 @@ public class ShadowPlatform : MonoBehaviour
         }
         else
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            Shader shader = Shader.Find("Legacy Shaders/Particles/Alpha Blended");
+            if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
             if (shader == null) shader = Shader.Find("Unlit/Color");
             Material mat = new Material(shader);
-            mat.color = new Color(0, 0, 0, 0.5f);
+            mat.color = new Color(0, 0, 0, 1f);
             meshRenderer.material = mat;
         }
 
         meshCollider = platformChild.AddComponent<MeshCollider>();
-        meshCollider.convex = true;
+        meshCollider.convex = false;
         meshCollider.isTrigger = false;
     }
 
@@ -90,14 +99,16 @@ public class ShadowPlatform : MonoBehaviour
             return;
         }
 
-        float targetY = groundY + yOffset;
-
         if (!GetCylinderParams(casterFilter, shadowCaster.transform,
                 out float objBottomY, out float objTopY, out float objRadius, out Vector3 objCenterXZ))
         {
             ClearShadow();
             return;
         }
+
+        obstacleCenterXZ = new Vector2(objCenterXZ.x, objCenterXZ.z);
+        shadowHeight = objBottomY + yOffset;
+        float targetY = shadowHeight;
 
         List<Vector2> projectedXZ = new List<Vector2>();
 
@@ -180,6 +191,19 @@ public class ShadowPlatform : MonoBehaviour
             }
         }
 
+        // Anchor shadow to the obstacle's base only when light-projected
+        // points exist, so no shadow appears when the light isn't hitting.
+        if (projectedXZ.Count > 0)
+        {
+            for (int s = 0; s < samplesPerRing; s++)
+            {
+                float angle = (float)s / samplesPerRing * Mathf.PI * 2f;
+                projectedXZ.Add(new Vector2(
+                    objCenterXZ.x + Mathf.Cos(angle) * objRadius,
+                    objCenterXZ.z + Mathf.Sin(angle) * objRadius));
+            }
+        }
+
         if (projectedXZ.Count < 3)
         {
             ClearShadow();
@@ -211,9 +235,9 @@ public class ShadowPlatform : MonoBehaviour
         debugTargetY = targetY;
         debugHasShadow = true;
 
-        platformChild.transform.position = new Vector3(0f, targetY, 0f);
+        platformChild.transform.position = Vector3.zero;
 
-        BuildMesh(hull);
+        BuildMesh(hull, objRadius);
         meshCollider.sharedMesh = null;
         meshCollider.sharedMesh = shadowMesh;
         meshCollider.enabled = true;
@@ -436,18 +460,33 @@ public class ShadowPlatform : MonoBehaviour
         return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
     }
 
-    void BuildMesh(List<Vector2> hullXZ)
+    void BuildMesh(List<Vector2> hullXZ, float cylinderRadius)
     {
         shadowMesh.Clear();
 
         int n = hullXZ.Count;
         float thickness = 0.02f;
+        float flatY = shadowHeight;
+
+        float fadeRange = maxShadowDistance - cylinderRadius;
+        if (fadeRange < 0.01f) fadeRange = 0.01f;
+
+        float[] distFromCenter = new float[n];
+        for (int i = 0; i < n; i++)
+            distFromCenter[i] = Vector2.Distance(hullXZ[i], obstacleCenterXZ);
 
         Vector3[] verts = new Vector3[n * 2];
+        Color[] colors = new Color[n * 2];
         for (int i = 0; i < n; i++)
         {
-            verts[i]     = new Vector3(hullXZ[i].x, 0f,          hullXZ[i].y);
-            verts[i + n] = new Vector3(hullXZ[i].x, -thickness,  hullXZ[i].y);
+            verts[i]     = new Vector3(hullXZ[i].x, flatY,          hullXZ[i].y);
+            verts[i + n] = new Vector3(hullXZ[i].x, flatY - thickness, hullXZ[i].y);
+
+            float t = Mathf.Clamp01((distFromCenter[i] - cylinderRadius) / fadeRange);
+            float alpha = Mathf.Lerp(shadowNearOpacity, shadowFarOpacity, t);
+            Color vc = new Color(0f, 0f, 0f, alpha);
+            colors[i]     = vc;
+            colors[i + n] = vc;
         }
 
         int[] tris = new int[(n - 2) * 6 + n * 6];
@@ -481,6 +520,7 @@ public class ShadowPlatform : MonoBehaviour
         }
 
         shadowMesh.vertices = verts;
+        shadowMesh.colors = colors;
         shadowMesh.triangles = tris;
         shadowMesh.RecalculateNormals();
         shadowMesh.RecalculateBounds();

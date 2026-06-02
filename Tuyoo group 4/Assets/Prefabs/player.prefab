@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 999967016681308526}
   m_Layer: 0
   m_Name: Spot Light
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -46,7 +46,7 @@ Light:
   m_Type: 0
   m_Color: {r: 1, g: 0.92231536, b: 0.63836473, a: 1}
   m_Intensity: 500
-  m_Range: 50
+  m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -518,7 +518,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.0000001, y: 2, z: 1.0000002}
+  m_Size: {x: 1.2, y: 2, z: 1}
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
 --- !u!114 &1595898438875895767
 MonoBehaviour:
@@ -1018,7 +1018,7 @@ Transform:
   m_GameObject: {fileID: 3497879195791072456}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: -1.11, z: -0.94}
+  m_LocalPosition: {x: 0, y: -1.11, z: 0.192}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
