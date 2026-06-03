@@ -17,6 +17,10 @@ public class FinishTrigger : MonoBehaviour
     [Tooltip("Optional: assign a pre-made Canvas to override the auto-created one.")]
     [SerializeField] public GameObject uiPanel;
 
+    [Tooltip("Canvas shown when the player reaches the endpoint but has NOT collected " +
+             "all collectibles. Leave null to fall back to the normal finish canvas.")]
+    [SerializeField] private GameObject incompletePanel;
+
     private GameObject finishCanvas;
     private bool triggered;
 
@@ -35,48 +39,92 @@ public class FinishTrigger : MonoBehaviour
         }
 
         finishCanvas.SetActive(false);
+
+        if (incompletePanel != null)
+        {
+            WireIncompleteButtons();
+            incompletePanel.SetActive(false);
+        }
     }
 
     void WireButtons()
     {
-        Button retryBtn = finishCanvas.transform.Find("RetryButton")?.GetComponent<Button>();
+        WireButtonPanel(finishCanvas.transform);
+    }
+
+    void WireIncompleteButtons()
+    {
+        if (incompletePanel != null)
+            WireButtonPanel(incompletePanel.transform);
+    }
+
+    void WireButtonPanel(Transform panel)
+    {
+        Button retryBtn = panel.Find("RetryButton")?.GetComponent<Button>();
         if (retryBtn != null) retryBtn.onClick.AddListener(Retry);
 
-        Button nextBtn = finishCanvas.transform.Find("NextLevelButton")?.GetComponent<Button>();
+        Button nextBtn = panel.Find("NextLevelButton")?.GetComponent<Button>();
         if (nextBtn != null) nextBtn.onClick.AddListener(NextLevel);
     }
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player") && !triggered)
+        if (!other.CompareTag("Player") || triggered)
+            return;
+
+        triggered = true;
+
+        // ── Common: disable player, free cursor ──
+        PlayerController controller = other.GetComponent<PlayerController>();
+        if (controller != null) controller.enabled = false;
+
+        Rigidbody rb = other.GetComponent<Rigidbody>();
+        if (rb != null)
         {
-            triggered = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // ── Branch: all collected vs half-complete ──
+        bool allCollected = CollectableManager.Instance != null
+                         && CollectableManager.Instance.AllCollected();
+
+        if (allCollected)
+        {
+            // Full completion — trigger world effects + cinematic + finish UI.
             EndpointReached = true;
 
             PlayerPrefs.DeleteKey("LastLevel");
             PlayerPrefs.Save();
 
-            PlayerController controller = other.GetComponent<PlayerController>();
-            if (controller != null) controller.enabled = false;
-
-            Rigidbody rb = other.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-                rb.isKinematic = true;
-            }
-
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-
-            // UI activation is now handled by EndingCinematicManager after the camera transition completes.
-            // finishCanvas.SetActive(true);
-
             if (EndingCinematicManager.Instance != null)
             {
                 EndingCinematicManager.Instance.endUIPanel = finishCanvas;
                 EndingCinematicManager.Instance.PlayEndingCinematic();
+            }
+            else
+            {
+                finishCanvas.SetActive(true);
+            }
+        }
+        else
+        {
+            // Half-complete — play cinematic, then show incomplete panel.
+            // EndpointReached stays false so SaturationController / RockGrow won't fire.
+            GameObject panelToShow = incompletePanel != null ? incompletePanel : finishCanvas;
+
+            if (EndingCinematicManager.Instance != null)
+            {
+                EndingCinematicManager.Instance.endUIPanel = panelToShow;
+                EndingCinematicManager.Instance.PlayEndingCinematic();
+            }
+            else
+            {
+                panelToShow.SetActive(true);
             }
         }
     }
