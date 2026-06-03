@@ -30,6 +30,8 @@ public class PlayerController : MonoBehaviour
     private bool isPushing;
     private GameObject pushedObject;
     private Rigidbody pushedRb;
+    private float holdYOffset;
+    private Collider pushedCollider;
     private GameObject nearestPushable;
     private int debugFrameCounter;
 
@@ -154,7 +156,22 @@ public class PlayerController : MonoBehaviour
         if (isPushing && pushedRb != null)
         {
             Vector3 targetPos = transform.position + visualModel.forward * pushPlaceDistance;
-            targetPos.y = pushedRb.position.y;
+            targetPos.y = transform.position.y + holdYOffset;
+
+            // Prevent embedding the object in the ground when the player
+            // walks onto higher terrain.
+            if (pushedCollider != null)
+            {
+                float halfHeight = pushedCollider.bounds.extents.y;
+                Vector3 rayOrigin = targetPos + Vector3.up * halfHeight;
+                if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit,
+                                    halfHeight + 2f, groundMask))
+                {
+                    targetPos.y = Mathf.Max(targetPos.y,
+                                            hit.point.y + halfHeight + 0.05f);
+                }
+            }
+
             pushedRb.MovePosition(targetPos);
         }
 
@@ -212,6 +229,10 @@ public class PlayerController : MonoBehaviour
         isPushing = true;
         pushedObject = obj;
         pushedRb = obj.GetComponent<Rigidbody>();
+        pushedCollider = obj.GetComponent<Collider>();
+
+        // Record the Y delta so the object follows terrain elevation.
+        holdYOffset = pushedRb.position.y - transform.position.y;
 
         PushableObject pushable = obj.GetComponent<PushableObject>();
         if (pushable != null)
@@ -236,29 +257,35 @@ public class PlayerController : MonoBehaviour
     {
         if (pushedObject != null)
         {
-            Collider[] playerCols = GetComponentsInChildren<Collider>();
-            Collider[] objCols = pushedObject.GetComponentsInChildren<Collider>();
-            foreach (Collider pc in playerCols)
-                foreach (Collider oc in objCols)
-                    Physics.IgnoreCollision(pc, oc, false);
-
-            // Let the PushableObject decide whether to stay put or fall.
             PushableObject pushable = pushedObject.GetComponent<PushableObject>();
             if (pushable != null)
             {
+                // PushableObject manages its own physics — skip collision
+                // restoration so the object doesn't bounce off the player.
                 pushable.OnReleased();
             }
-            // else if (pushedRb != null)
-            //{
-                // pushedRb.isKinematic = true;
-                // pushedRb.linearVelocity = Vector3.zero;
-                // pushedRb.angularVelocity = Vector3.zero;
-            // }
+            else
+            {
+                // Non-PushableObject: restore collisions and freeze in place.
+                Collider[] playerCols = GetComponentsInChildren<Collider>();
+                Collider[] objCols = pushedObject.GetComponentsInChildren<Collider>();
+                foreach (Collider pc in playerCols)
+                    foreach (Collider oc in objCols)
+                        Physics.IgnoreCollision(pc, oc, false);
+
+                if (pushedRb != null)
+                {
+                    pushedRb.isKinematic = true;
+                    pushedRb.linearVelocity = Vector3.zero;
+                    pushedRb.angularVelocity = Vector3.zero;
+                }
+            }
         }
 
         isPushing = false;
         pushedObject = null;
         pushedRb = null;
+        pushedCollider = null;
     }
 
     void OnDrawGizmosSelected()
