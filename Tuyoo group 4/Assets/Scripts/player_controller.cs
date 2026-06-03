@@ -213,7 +213,12 @@ public class PlayerController : MonoBehaviour
         pushedObject = obj;
         pushedRb = obj.GetComponent<Rigidbody>();
 
-        if (pushedRb != null)
+        PushableObject pushable = obj.GetComponent<PushableObject>();
+        if (pushable != null)
+        {
+            pushable.OnGrabbed();  // handles isKinematic + cancels void reset
+        }
+        else if (pushedRb != null)
         {
             pushedRb.isKinematic = true;
             pushedRb.linearVelocity = Vector3.zero;
@@ -237,12 +242,18 @@ public class PlayerController : MonoBehaviour
                 foreach (Collider oc in objCols)
                     Physics.IgnoreCollision(pc, oc, false);
 
-            if (pushedRb != null)
+            // Let the PushableObject decide whether to stay put or fall.
+            PushableObject pushable = pushedObject.GetComponent<PushableObject>();
+            if (pushable != null)
             {
-                pushedRb.isKinematic = true;
-                pushedRb.linearVelocity = Vector3.zero;
-                pushedRb.angularVelocity = Vector3.zero;
+                pushable.OnReleased();
             }
+            // else if (pushedRb != null)
+            //{
+                // pushedRb.isKinematic = true;
+                // pushedRb.linearVelocity = Vector3.zero;
+                // pushedRb.angularVelocity = Vector3.zero;
+            // }
         }
 
         isPushing = false;

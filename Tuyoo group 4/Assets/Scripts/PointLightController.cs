@@ -23,10 +23,21 @@ public class PointLightController : MonoBehaviour
     private bool isFlying;
     private float originalIntensity;
 
+    // Recorded in Start() — the position the designer placed the light
+    // relative to the player in the Editor, so it flies back to the hand
+    // instead of the player's center.
+    private Vector3 recordedHeldLocalPos;
+
     void Start()
     {
         light = GetComponent<Light>();
         originalIntensity = light.intensity;
+
+        // Use the actual Editor-placed local position as the fly target.
+        // Falls back to the Inspector value if the light isn't parented to the player.
+        recordedHeldLocalPos = transform.parent == player
+            ? transform.localPosition
+            : heldLocalPosition;
     }
 
     void Update()
@@ -52,14 +63,14 @@ public class PointLightController : MonoBehaviour
 
     void FlyTowardPlayer()
     {
-        Vector3 targetWorldPos = player.TransformPoint(heldLocalPosition);
+        Vector3 targetWorldPos = player.TransformPoint(recordedHeldLocalPos);
         Vector3 toTarget = targetWorldPos - transform.position;
         float distance = toTarget.magnitude;
 
         if (distance <= flySnapDistance)
         {
             transform.SetParent(player);
-            transform.localPosition = heldLocalPosition;
+            transform.localPosition = recordedHeldLocalPos;
             isFlying = false;
             isHeld = true;
             return;

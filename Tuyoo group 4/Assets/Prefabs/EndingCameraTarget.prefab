@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1556416637962005205
+--- !u!1 &1630325243990087147
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,7 +8,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6747095579461908583}
+  - component: {fileID: 1307964513573633678}
   m_Layer: 0
   m_Name: EndingCameraTarget
   m_TagString: Untagged
@@ -16,13 +16,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6747095579461908583
+--- !u!4 &1307964513573633678
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1556416637962005205}
+  m_GameObject: {fileID: 1630325243990087147}
   serializedVersion: 2
   m_LocalRotation: {x: 0.058108002, y: -0.7250983, z: -0.103911735, w: -0.678276}
   m_LocalPosition: {x: -20.292, y: 1.837, z: 3.595}
