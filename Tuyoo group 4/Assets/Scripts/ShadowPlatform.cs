@@ -62,8 +62,8 @@ public class ShadowPlatform : MonoBehaviour
         }
         else
         {
-            Shader shader = Shader.Find("Legacy Shaders/Particles/Alpha Blended");
-            if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
+            Shader shader = Shader.Find("Mobile/Particles/Alpha Blended");
+            if (shader == null) shader = Shader.Find("Legacy Shaders/Particles/Alpha Blended");
             if (shader == null) shader = Shader.Find("Unlit/Color");
             Material mat = new Material(shader);
             mat.color = new Color(0, 0, 0, 1f);

@@ -24,6 +24,8 @@ public class MirrorReflection : MonoBehaviour
     [Header("Intensity")]
     public float intensityMultiplier = 1f;
     public bool useDistanceFalloff = true;
+    [Tooltip("Minimum effective intensity at the mirror face required to trigger a reflection. Prevents reflections from distant or dim lights.")]
+    public float minSourceIntensity = 0.01f;
 
     [Header("Reflected Spotlight")]
     [Range(1f, 179f)]
@@ -54,11 +56,19 @@ public class MirrorReflection : MonoBehaviour
             CreateSpotlight();
             autoCreatedLight = true;
         }
+
     }
 
     void Update()
     {
         if (lightSource == null || spotLight == null) return;
+
+        Light srcLight = lightSource.GetComponent<Light>();
+        if (srcLight != null && !srcLight.enabled)
+        {
+            DisableReflection();
+            return;
+        }
 
         Vector3 faceCenter = GetFaceCenter();
         Vector3 faceNormal = GetFaceNormal();
@@ -71,7 +81,6 @@ public class MirrorReflection : MonoBehaviour
             return;
         }
 
-        Light srcLight = lightSource.GetComponent<Light>();
         float sourceHalfCone = srcLight != null && srcLight.type == LightType.Spot
             ? srcLight.spotAngle / 2f
             : 90f;
@@ -80,6 +89,23 @@ public class MirrorReflection : MonoBehaviour
         Vector3 toFaceCenter = faceCenter - lightSource.position;
         float angleToFace = Vector3.Angle(lightSource.forward, toFaceCenter);
         float distance = toFaceCenter.magnitude;
+
+        // Disable if the mirror is outside the source light's range.
+        if (srcLight != null && distance > srcLight.range)
+        {
+            DisableReflection();
+            return;
+        }
+
+        // Disable if the source light is too dim to produce a meaningful reflection.
+        float sourceIntensity = srcLight != null ? srcLight.intensity : 1f;
+        float falloff = useDistanceFalloff ? 1f / Mathf.Max(1f, distance * distance) : 1f;
+        float effectiveIntensity = sourceIntensity * falloff;
+        if (effectiveIntensity < minSourceIntensity)
+        {
+            DisableReflection();
+            return;
+        }
 
         float halfW, halfH;
         GetFaceHalfExtents(out halfW, out halfH);
@@ -114,9 +140,6 @@ public class MirrorReflection : MonoBehaviour
         spotLight.transform.position = reflectOrigin;
         spotLight.transform.rotation = Quaternion.LookRotation(reflectedDir);
 
-        float sourceIntensity = srcLight != null ? srcLight.intensity : 1f;
-        float falloff = useDistanceFalloff ? 1f / Mathf.Max(1f, distance * distance) : 1f;
-
         spotLight.intensity = sourceIntensity * intensityMultiplier * falloff;
 
         if (autoCreatedLight)
@@ -124,11 +147,13 @@ public class MirrorReflection : MonoBehaviour
             spotLight.color = spotColor;
             spotLight.range = spotRange;
         }
+
     }
 
     void DisableReflection()
     {
         spotLight.enabled = false;
+        spotLight.intensity = 0f;
     }
 
     bool IsPointOnFace(Vector3 worldPoint, Vector3 faceCenter, Vector3 faceNormal)
