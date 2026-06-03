@@ -136,8 +136,13 @@ public class FinishTrigger : MonoBehaviour
 
     public void NextLevel()
     {
-        if (nextScene != null)
+        if (nextScene == null)
+            return;
+
+        if (SceneTransition.Instance != null)
             SceneTransition.Instance.TransitionToScene(nextScene.name, SceneTransition.GetLevelDisplayName(nextScene.name));
+        else
+            SceneManager.LoadScene(nextScene.name);
     }
 
     void BuildFinishUI()
