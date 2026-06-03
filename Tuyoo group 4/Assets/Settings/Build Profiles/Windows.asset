@@ -24,14 +24,17 @@ MonoBehaviour:
     m_path: Assets/Scenes/MainMenuScene.unity
     m_guid: 4f6f59153c1cf624b8dc81b4d70ef1ca
   - m_enabled: 1
-    m_path: Assets/Scenes/LevelSelect.unity
-    m_guid: fe6441b393c62da4daa8116c4c994651
-  - m_enabled: 1
     m_path: Assets/Scenes/SampleScene.unity
     m_guid: 99c9720ab356a0642a771bea13969a05
   - m_enabled: 1
     m_path: Assets/Scenes/level2.unity
     m_guid: 9db62d370f20a4906b70dd4786917dcf
+  - m_enabled: 1
+    m_path: Assets/Scenes/Real level2.unity
+    m_guid: 23029d95394b4334bad9ccb27656a8ae
+  - m_enabled: 1
+    m_path: Assets/Scenes/Level3.unity
+    m_guid: 41ad27e2e0176b543bbf0b453b47440f
   m_HasScriptingDefines: 0
   m_ScriptingDefines: []
   m_PlayerSettingsYaml:

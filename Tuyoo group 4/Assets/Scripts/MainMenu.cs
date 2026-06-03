@@ -1,40 +1,32 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 public class MainMenu : MonoBehaviour
 {
-    [Header("Scene Names")]
-    public string levelSelectScene = "LevelSelect";
-
-    [Header("Settings")]
-    public GameObject settingsPanel;
-
-    void Start()
-    {
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-
-        if (settingsPanel != null)
-            settingsPanel.SetActive(false);
-    }
-
     public void NewGame()
     {
-        SceneManager.LoadScene(levelSelectScene);
+        PlayerPrefs.DeleteKey("LastLevel");
+        PlayerPrefs.Save();
+        SceneTransition.Instance.TransitionToScene("SampleScene", SceneTransition.GetLevelDisplayName("SampleScene"));
     }
 
     public void LoadGame()
     {
         string lastLevel = PlayerPrefs.GetString("LastLevel", "");
-        if (!string.IsNullOrEmpty(lastLevel))
-            SceneManager.LoadScene(lastLevel);
-    }
+        string targetScene;
+        string displayName;
 
-    public void ToggleSettings()
-    {
-        if (settingsPanel != null)
-            settingsPanel.SetActive(!settingsPanel.activeSelf);
+        if (!string.IsNullOrEmpty(lastLevel))
+        {
+            targetScene = lastLevel;
+            displayName = SceneTransition.GetLevelDisplayName(lastLevel);
+        }
+        else
+        {
+            targetScene = "SampleScene";
+            displayName = SceneTransition.GetLevelDisplayName("SampleScene");
+        }
+
+        SceneTransition.Instance.TransitionToScene(targetScene, displayName);
     }
 
     public void ExitGame()
