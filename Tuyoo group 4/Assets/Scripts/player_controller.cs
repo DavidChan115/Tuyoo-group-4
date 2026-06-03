@@ -12,6 +12,8 @@ public class PlayerController : MonoBehaviour
     public float pushMassFactor = 0.15f;
     [Tooltip("Slowest the player can go while pushing, as a fraction of base speed")]
     public float pushMinSpeedMultiplier = 0.2f;
+    [Tooltip("Extra multiplier for how much mass slows rotation. Higher = rotation feels heavier.")]
+    public float pushRotationSlowdown = 2f;
     public float pushDetectionRadius = 2.5f;
     public float pushPlaceDistance = 0.7f;
     public LayerMask pushableMask = ~0;
@@ -130,7 +132,11 @@ public class PlayerController : MonoBehaviour
             if (isPushing && pushedRb != null)
                 massFactor = Mathf.Clamp(1f - (pushedRb.mass * pushMassFactor), pushMinSpeedMultiplier, 1f);
 
-            float currentRotationSpeed = rotationSpeed * massFactor;
+            float rotationMassFactor = 1f;
+            if (isPushing && pushedRb != null)
+                rotationMassFactor = Mathf.Clamp(1f - (pushedRb.mass * pushMassFactor * pushRotationSlowdown), pushMinSpeedMultiplier, 1f);
+
+            float currentRotationSpeed = rotationSpeed * rotationMassFactor;
             Quaternion targetRotation = Quaternion.LookRotation(new Vector3(moveInput.x, 0f, moveInput.z));
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, currentRotationSpeed * Time.fixedDeltaTime));
 
@@ -158,21 +164,36 @@ public class PlayerController : MonoBehaviour
             Vector3 targetPos = transform.position + visualModel.forward * pushPlaceDistance;
             targetPos.y = transform.position.y + holdYOffset;
 
-            // Prevent embedding the object in the ground when the player
-            // walks onto higher terrain.
             if (pushedCollider != null)
             {
                 float halfHeight = pushedCollider.bounds.extents.y;
                 Vector3 rayOrigin = targetPos + Vector3.up * halfHeight;
+                int objectLayer = 1 << pushedObject.layer;
+                LayerMask raycastMask = groundMask & ~objectLayer;
                 if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit,
-                                    halfHeight + 2f, groundMask))
+                                    halfHeight + 2f, raycastMask))
                 {
                     targetPos.y = Mathf.Max(targetPos.y,
                                             hit.point.y + halfHeight + 0.05f);
                 }
             }
 
+            PushableObject pushable = pushedObject.GetComponent<PushableObject>();
+            bool hitBoundary = false;
+            if (pushable != null)
+            {
+                Vector3 clampedPos = pushable.ClampToGroundArea(targetPos);
+                float xzDelta = Vector2.Distance(
+                    new Vector2(targetPos.x, targetPos.z),
+                    new Vector2(clampedPos.x, clampedPos.z));
+                targetPos = clampedPos;
+                hitBoundary = xzDelta > 0.05f;
+            }
+
             pushedRb.MovePosition(targetPos);
+
+            if (hitBoundary)
+                ReleaseObstacle();
         }
 
         debugFrameCounter++;
@@ -260,26 +281,15 @@ public class PlayerController : MonoBehaviour
             PushableObject pushable = pushedObject.GetComponent<PushableObject>();
             if (pushable != null)
             {
-                // PushableObject manages its own physics — skip collision
-                // restoration so the object doesn't bounce off the player.
                 pushable.OnReleased();
             }
-            else
-            {
-                // Non-PushableObject: restore collisions and freeze in place.
-                Collider[] playerCols = GetComponentsInChildren<Collider>();
-                Collider[] objCols = pushedObject.GetComponentsInChildren<Collider>();
-                foreach (Collider pc in playerCols)
-                    foreach (Collider oc in objCols)
-                        Physics.IgnoreCollision(pc, oc, false);
 
-                if (pushedRb != null)
-                {
-                    pushedRb.isKinematic = true;
-                    pushedRb.linearVelocity = Vector3.zero;
-                    pushedRb.angularVelocity = Vector3.zero;
-                }
-            }
+            // Always restore collision after release
+            Collider[] playerCols = GetComponentsInChildren<Collider>();
+            Collider[] objCols = pushedObject.GetComponentsInChildren<Collider>();
+            foreach (Collider pc in playerCols)
+                foreach (Collider oc in objCols)
+                    Physics.IgnoreCollision(pc, oc, false);
         }
 
         isPushing = false;

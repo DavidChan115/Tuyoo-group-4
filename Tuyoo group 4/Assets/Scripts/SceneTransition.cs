@@ -6,7 +6,20 @@ using TMPro;
 
 public class SceneTransition : MonoBehaviour
 {
-    public static SceneTransition Instance { get; private set; }
+    public static SceneTransition Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                GameObject obj = new GameObject("SceneTransition");
+                _instance = obj.AddComponent<SceneTransition>();
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
+    private static SceneTransition _instance;
 
     [Header("Timing")]
     public float fadeInDuration = 1f;
@@ -19,12 +32,12 @@ public class SceneTransition : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        Instance = this;
+        _instance = this;
         DontDestroyOnLoad(gameObject);
         BuildOverlay();
     }

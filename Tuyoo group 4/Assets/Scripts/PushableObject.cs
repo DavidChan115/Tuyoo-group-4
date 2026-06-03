@@ -4,75 +4,51 @@ using TMPro;
 [RequireComponent(typeof(Rigidbody))]
 public class PushableObject : MonoBehaviour
 {
-    // ═══════════════════════════════════════════════
-    // Prompt Reference (pre-made in Editor)
-    // ═══════════════════════════════════════════════
-    [Header("Prompt Reference")]
-    [Tooltip("Drag the pre-made World Space Canvas GameObject here.")]
+    [Header("Prompt")]
     [SerializeField] private GameObject promptRoot;
-
-    [Tooltip("Drag the TextMeshProUGUI component on the prompt canvas here.")]
-    [SerializeField] private TextMeshProUGUI promptTextComponent;
-
-    // ═══════════════════════════════════════════════
-    // Proximity Settings
-    // ═══════════════════════════════════════════════
-    [Header("Proximity Settings")]
-    [Tooltip("How close the player must be for the prompt to appear.")]
+    [SerializeField] private TMP_Text promptText;
     [SerializeField] private float proximityDistance = 3f;
 
-    // ═══════════════════════════════════════════════
-    // Void Reset
-    // ═══════════════════════════════════════════════
-    [Header("Void Reset")]
-    [Tooltip("If true, object resets to its world position at Start(). " +
-             "If false, the Custom Reset Position below is used.")]
-    [SerializeField] private bool useDefaultResetPosition = true;
+    [Header("Ground Lock")]
+    [SerializeField] private LayerMask groundMask = ~0;
+    [SerializeField] private float groundCheckDistance = 5f;
 
-    [Tooltip("Custom world-space reset position. Only used when " +
-             "Use Default Reset Position is false.")]
+    [Header("Ground Boundary")]
+    [Tooltip("If enabled, the object cannot be pushed/pulled beyond the edges of the ground it starts on.")]
+    [SerializeField] private bool constrainToGroundBounds = true;
+
+    [Header("Void Reset")]
+    [SerializeField] private float voidYThreshold = -20f;
+    [SerializeField] private bool useCustomResetPosition;
     [SerializeField] private Vector3 customResetPosition;
 
-    [Tooltip("Y world-coordinate below which the object is considered 'in the void'.")]
-    [SerializeField] private float voidYThreshold = -20f;
-
-    // ═══════════════════════════════════════════════
-    // Private State
-    // ═══════════════════════════════════════════════
     private Rigidbody rb;
+    private Collider col;
     private Transform playerTransform;
     private Camera cachedCamera;
     private Canvas promptCanvas;
+    private Vector3 startPosition;
+    private Quaternion startRotation;
+    private bool isGrabbed;
+    private bool isInVoid;
 
-    private Vector3 defaultResetPosition;
-    private Quaternion defaultResetRotation;
-    private bool isInVoidTrigger;
-    private bool diagnosticsLogged;
+    // Ground boundary clamping
+    private Bounds groundBounds;
+    private float objectRadius;
+    private bool hasGroundBounds;
 
-    private static readonly RigidbodyConstraints FreezeAllButY =
-        RigidbodyConstraints.FreezePositionX |
-        RigidbodyConstraints.FreezePositionZ |
-        RigidbodyConstraints.FreezeRotation;
-
-    // ═══════════════════════════════════════════════
-    // Unity Messages
-    // ═══════════════════════════════════════════════
-
-    private void Start()
+    void Start()
     {
         rb = GetComponent<Rigidbody>();
+        col = GetComponent<Collider>();
         rb.isKinematic = true;
         rb.useGravity = false;
-        rb.constraints = RigidbodyConstraints.None;
 
-        defaultResetPosition = transform.position;
-        defaultResetRotation = transform.rotation;
+        startPosition = transform.position;
+        startRotation = transform.rotation;
 
-        GameObject player = GameObject.FindWithTag("Player");
-        if (player != null)
-            playerTransform = player.transform;
-
-        cachedCamera = FindAnyCamera();
+        playerTransform = GameObject.FindWithTag("Player")?.transform;
+        cachedCamera = Camera.main;
 
         if (promptRoot != null)
         {
@@ -80,203 +56,169 @@ public class PushableObject : MonoBehaviour
             promptRoot.SetActive(false);
         }
 
-        // Default text string.
-        if (promptTextComponent != null)
-            promptTextComponent.text = "Press F to move the object";
+        if (promptText != null)
+            promptText.text = "Press F to move the object";
 
-        LogDiagnostics();
+        if (constrainToGroundBounds)
+            DetectGroundBounds();
     }
 
-    private void Update()
+    void Update()
     {
-        RefreshCameraReference();
+        if (cachedCamera == null || !cachedCamera.isActiveAndEnabled)
+            cachedCamera = Camera.main;
 
-        // Keep the world-space Canvas pointed at the active camera
-        // (without this, the Canvas won't render at all).
-        if (promptCanvas != null && promptCanvas.worldCamera != cachedCamera)
+        if (promptCanvas != null && cachedCamera != null && promptCanvas.worldCamera != cachedCamera)
             promptCanvas.worldCamera = cachedCamera;
 
-        // ── Proximity prompt ──
         if (promptRoot != null && playerTransform != null)
         {
-            bool inRange = Vector3.Distance(transform.position, playerTransform.position)
-                           <= proximityDistance;
-
+            bool inRange = Vector3.Distance(transform.position, playerTransform.position) <= proximityDistance;
             if (promptRoot.activeSelf != inRange)
                 promptRoot.SetActive(inRange);
         }
 
-        // ── Void detection ──
-        if (!rb.isKinematic && IsInVoid())
-            ResetToDefault();
+        if (!isGrabbed && transform.position.y < voidYThreshold)
+            ResetToStart();
     }
 
-    private void LateUpdate()
+    void LateUpdate()
     {
-        if (promptRoot == null || !promptRoot.activeSelf || cachedCamera == null)
-            return;
-
-        promptRoot.transform.rotation = Quaternion.LookRotation(
-            cachedCamera.transform.position - promptRoot.transform.position);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Void"))
+        if (promptRoot != null && promptRoot.activeSelf && cachedCamera != null)
         {
-            isInVoidTrigger = true;
-            if (!rb.isKinematic)
-                ResetToDefault();
+            promptRoot.transform.rotation = Quaternion.LookRotation(
+                cachedCamera.transform.position - promptRoot.transform.position);
         }
     }
 
-    private void OnTriggerExit(Collider other)
+    void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Void"))
-            isInVoidTrigger = false;
+        {
+            isInVoid = true;
+            if (!isGrabbed)
+                ResetToStart();
+        }
     }
 
-    // ═══════════════════════════════════════════════
-    // Public API — called by PlayerController
-    // ═══════════════════════════════════════════════
+    void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Void"))
+            isInVoid = false;
+    }
 
     public void OnGrabbed()
     {
-        rb.constraints = RigidbodyConstraints.None;
+        isGrabbed = true;
         rb.isKinematic = true;
         rb.useGravity = false;
-        isInVoidTrigger = false;
+        isInVoid = false;
+
+        if (promptRoot != null)
+            promptRoot.SetActive(false);
     }
 
     public void OnReleased()
     {
-        rb.position = transform.position;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
+        isGrabbed = false;
 
-        // Ensure the object is not embedded in the ground before enabling
-        // physics.  When the player walks onto higher terrain while holding
-        // the object, its Y gets pushed below the surface.  Without this
-        // correction, the physics engine would eject it upward — the "bounce".
-        Collider col = GetComponent<Collider>();
-        if (col != null)
+        // Snap Y to ground
+        float halfHeight = col != null ? col.bounds.extents.y : 0.5f;
+        Vector3 rayOrigin = transform.position + Vector3.up * 0.5f;
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, groundCheckDistance, groundMask))
         {
-            float halfHeight = col.bounds.extents.y + 0.05f;
-            Vector3 rayOrigin = transform.position + Vector3.up * 2f;
-            if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, 10f))
-            {
-                float groundY = hit.point.y + halfHeight;
-                if (groundY > transform.position.y)
-                {
-                    Vector3 corrected = rb.position;
-                    corrected.y = groundY;
-                    rb.position = corrected;
-                    transform.position = corrected;
-                }
-            }
+            Vector3 snapped = transform.position;
+            snapped.y = hit.point.y + halfHeight;
+            transform.position = snapped;
         }
 
-        rb.isKinematic = false;
-        rb.useGravity = true;
-        rb.constraints = FreezeAllButY;
+        // Lock in place — kinematic, no gravity, no constraints needed
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
     }
 
-    // ═══════════════════════════════════════════════
-    // Helpers
-    // ═══════════════════════════════════════════════
-
-    private void RefreshCameraReference()
-    {
-        if (cachedCamera == null || !cachedCamera.isActiveAndEnabled)
-            cachedCamera = FindAnyCamera();
-    }
-
-    private static Camera FindAnyCamera()
-    {
-        Camera cam = Camera.main;
-        if (cam != null)
-            return cam;
-
-        cam = FindObjectOfType<Camera>();
-        if (cam != null)
-            return cam;
-
-        // Include inactive cameras. World Space Canvas just needs a Camera
-        // reference to project its geometry — it renders fine even when the
-        // referenced camera is inactive.
-        Camera[] all = Resources.FindObjectsOfTypeAll<Camera>();
-        if (all.Length > 0)
-            return all[0];
-
-        return null;
-    }
-
-    private bool IsInVoid()
-    {
-        return isInVoidTrigger || transform.position.y < voidYThreshold;
-    }
-
-    private void ResetToDefault()
+    void ResetToStart()
     {
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         rb.isKinematic = true;
         rb.useGravity = false;
-        rb.constraints = RigidbodyConstraints.None;
+        isGrabbed = false;
 
-        Vector3 targetPos = useDefaultResetPosition
-            ? defaultResetPosition
-            : customResetPosition;
-
-        transform.position = targetPos;
-        transform.rotation = defaultResetRotation;
-        isInVoidTrigger = false;
+        transform.position = useCustomResetPosition ? customResetPosition : startPosition;
+        transform.rotation = startRotation;
+        isInVoid = false;
     }
 
-    // ═══════════════════════════════════════════════
-    // Diagnostics
-    // ═══════════════════════════════════════════════
-
-    private void LogDiagnostics()
+    void DetectGroundBounds()
     {
-        if (diagnosticsLogged) return;
-        diagnosticsLogged = true;
+        float halfHeight = col != null ? col.bounds.extents.y : 0.5f;
+        Vector3 rayOrigin = transform.position + Vector3.up * 1f;
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, 20f, groundMask))
+        {
+            Collider groundCol = hit.collider;
+            groundBounds = groundCol.bounds;
+            hasGroundBounds = true;
+        }
 
-        if (promptRoot == null)
-            Debug.LogWarning($"[PushableObject] '{name}': Prompt Root is not assigned. " +
-                             "The proximity text will not appear. Drag your World Space Canvas here.", this);
-
-        if (promptTextComponent == null)
-            Debug.LogWarning($"[PushableObject] '{name}': Prompt Text Component is not assigned. " +
-                             "Drag the TextMeshProUGUI here.", this);
-
-        if (playerTransform == null)
-            Debug.LogWarning($"[PushableObject] '{name}': No GameObject tagged 'Player' found. " +
-                             "The proximity check will never trigger.", this);
-
-        if (cachedCamera == null)
-            Debug.LogWarning($"[PushableObject] '{name}': No camera found. Billboarding won't work.", this);
+        if (col != null)
+        {
+            Bounds b = col.bounds;
+            objectRadius = Mathf.Max(b.extents.x, b.extents.z);
+        }
     }
 
-    // ═══════════════════════════════════════════════
-    // Editor Gizmos
-    // ═══════════════════════════════════════════════
+    public Vector3 ClampToGroundArea(Vector3 position)
+    {
+        if (!hasGroundBounds) return position;
 
-    private void OnDrawGizmosSelected()
+        Vector3 clamped = position;
+        float minX = groundBounds.min.x + objectRadius;
+        float maxX = groundBounds.max.x - objectRadius;
+        float minZ = groundBounds.min.z + objectRadius;
+        float maxZ = groundBounds.max.z - objectRadius;
+
+        if (minX < maxX)
+            clamped.x = Mathf.Clamp(clamped.x, minX, maxX);
+        else
+            clamped.x = (minX + maxX) * 0.5f;
+
+        if (minZ < maxZ)
+            clamped.z = Mathf.Clamp(clamped.z, minZ, maxZ);
+        else
+            clamped.z = (minZ + maxZ) * 0.5f;
+
+        return clamped;
+    }
+
+    void OnDrawGizmosSelected()
     {
         Gizmos.color = new Color(1f, 1f, 0f, 0.3f);
         Gizmos.DrawWireSphere(transform.position, proximityDistance);
 
         Gizmos.color = Color.red;
         Vector3 lineCenter = new Vector3(transform.position.x, voidYThreshold, transform.position.z);
-        float span = 5f;
-        Gizmos.DrawLine(lineCenter + Vector3.left * span, lineCenter + Vector3.right * span);
-        Gizmos.DrawLine(lineCenter + Vector3.forward * span, lineCenter + Vector3.back * span);
+        Gizmos.DrawLine(lineCenter + Vector3.left * 5f, lineCenter + Vector3.right * 5f);
+        Gizmos.DrawLine(lineCenter + Vector3.forward * 5f, lineCenter + Vector3.back * 5f);
 
-        if (!useDefaultResetPosition)
+        if (useCustomResetPosition)
         {
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(customResetPosition, 0.3f);
+        }
+
+        if (hasGroundBounds)
+        {
+            Gizmos.color = Color.cyan;
+            float y = groundBounds.center.y;
+            Vector3 center = new Vector3(groundBounds.center.x, y, groundBounds.center.z);
+            Vector3 size = new Vector3(
+                groundBounds.size.x - objectRadius * 2f,
+                0.05f,
+                groundBounds.size.z - objectRadius * 2f);
+            Gizmos.DrawWireCube(center, size);
         }
     }
 }
