@@ -19,6 +19,7 @@ public class RespawnOnFall : MonoBehaviour
     private bool isDead;
     private GameObject deathCanvas;
     private GameObject deadPlayer;
+    private Behaviour cinemachineBrain;
 
     void Start()
     {
@@ -56,6 +57,12 @@ public class RespawnOnFall : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
+        cinemachineBrain = Camera.main?.GetComponent("CinemachineBrain") as Behaviour;
+        if (cinemachineBrain != null)
+            cinemachineBrain.enabled = false;
+
+        Time.timeScale = 0f;
+
         DeathScreenActive = true;
         deathCanvas.SetActive(true);
     }
@@ -63,6 +70,7 @@ public class RespawnOnFall : MonoBehaviour
 
     public void RestartScene()
     {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
