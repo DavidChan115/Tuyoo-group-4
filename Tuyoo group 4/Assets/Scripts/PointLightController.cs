@@ -33,6 +33,10 @@ public class PointLightController : MonoBehaviour
         light = GetComponent<Light>();
         originalIntensity = light.intensity;
 
+        light.shadows = LightShadows.Hard;
+        if (spotLight != null)
+            spotLight.shadows = LightShadows.Hard;
+
         // Use the actual Editor-placed local position as the fly target.
         // Falls back to the Inspector value if the light isn't parented to the player.
         recordedHeldLocalPos = transform.parent == player

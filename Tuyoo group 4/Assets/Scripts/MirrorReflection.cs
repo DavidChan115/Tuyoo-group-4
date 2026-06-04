@@ -17,14 +17,14 @@ public class MirrorReflection : MonoBehaviour
     [Tooltip("Which face of the box acts as the reflective surface.")]
     public MirrorFace reflectiveFace = MirrorFace.Forward;
 
-    [Header("Light Source")]
-    [Tooltip("The Spotlight whose beam is reflected. Must be a Spot light.")]
-    public Transform lightSource;
+    [Header("Light Sources")]
+    [Tooltip("The Spotlights whose beams can be reflected. The mirror uses the first valid one.")]
+    public Transform[] lightSources;
 
     [Header("Intensity")]
     public float intensityMultiplier = 1f;
     public bool useDistanceFalloff = true;
-    [Tooltip("Minimum effective intensity at the mirror face required to trigger a reflection. Prevents reflections from distant or dim lights.")]
+    [Tooltip("Minimum effective intensity at the mirror face required to trigger a reflection.")]
     public float minSourceIntensity = 0.01f;
 
     [Header("Reflected Spotlight")]
@@ -35,12 +35,19 @@ public class MirrorReflection : MonoBehaviour
     [Tooltip("Optional — assign your own Light. If empty, one is created automatically.")]
     public Light customReflectionLight;
 
+    [Header("Blocking")]
+    [Tooltip("Objects on these layers will block the light from reaching the mirror.")]
+    public LayerMask blockingMask = ~0;
+
     [Header("Debug")]
     public bool drawGizmos = true;
 
     private Light spotLight;
     private bool autoCreatedLight;
     private BoxCollider boxCol;
+
+    // Track which source is active this frame (for gizmos)
+    private Transform activeSource;
 
     void Awake()
     {
@@ -49,6 +56,7 @@ public class MirrorReflection : MonoBehaviour
         if (customReflectionLight != null)
         {
             spotLight = customReflectionLight;
+            spotLight.shadows = LightShadows.Hard;
             autoCreatedLight = false;
         }
         else
@@ -56,15 +64,11 @@ public class MirrorReflection : MonoBehaviour
             CreateSpotlight();
             autoCreatedLight = true;
         }
-
     }
 
     void Update()
     {
-        if (lightSource == null || spotLight == null) return;
-
-        Light srcLight = lightSource.GetComponent<Light>();
-        if (srcLight != null && !srcLight.enabled)
+        if (lightSources == null || lightSources.Length == 0 || spotLight == null)
         {
             DisableReflection();
             return;
@@ -73,87 +77,101 @@ public class MirrorReflection : MonoBehaviour
         Vector3 faceCenter = GetFaceCenter();
         Vector3 faceNormal = GetFaceNormal();
 
-        // Mirror only reflects when it faces the light source
-        Vector3 faceToSource = lightSource.position - faceCenter;
-        if (Vector3.Dot(faceNormal, faceToSource) <= 0f)
+        // Try each light source — use the first one that passes all checks.
+        foreach (Transform source in lightSources)
         {
-            DisableReflection();
-            return;
-        }
+            if (source == null) continue;
 
-        float sourceHalfCone = srcLight != null && srcLight.type == LightType.Spot
-            ? srcLight.spotAngle / 2f
-            : 90f;
+            Light srcLight = source.GetComponent<Light>();
+            if (srcLight == null) continue;
 
-        // Check if the mirror face is within the spotlight's cone
-        Vector3 toFaceCenter = faceCenter - lightSource.position;
-        float angleToFace = Vector3.Angle(lightSource.forward, toFaceCenter);
-        float distance = toFaceCenter.magnitude;
+            // --- Face-toward check ---
+            Vector3 faceToSource = source.position - faceCenter;
+            if (Vector3.Dot(faceNormal, faceToSource) <= 0f)
+                continue;
 
-        // Disable if the mirror is outside the source light's range.
-        if (srcLight != null && distance > srcLight.range)
-        {
-            DisableReflection();
-            return;
-        }
+            // --- Distance & range ---
+            Vector3 toFaceCenter = faceCenter - source.position;
+            float distance = toFaceCenter.magnitude;
 
-        // Disable if the source light is too dim to produce a meaningful reflection.
-        float sourceIntensity = srcLight != null ? srcLight.intensity : 1f;
-        float falloff = useDistanceFalloff ? 1f / Mathf.Max(1f, distance * distance) : 1f;
-        float effectiveIntensity = sourceIntensity * falloff;
-        if (effectiveIntensity < minSourceIntensity)
-        {
-            DisableReflection();
-            return;
-        }
+            if (distance > srcLight.range)
+                continue;
 
-        float halfW, halfH;
-        GetFaceHalfExtents(out halfW, out halfH);
-        float faceAngularRadius = Mathf.Atan(Mathf.Max(halfW, halfH) / Mathf.Max(distance, 0.001f)) * Mathf.Rad2Deg;
+            // --- Intensity ---
+            float sourceIntensity = srcLight.intensity;
+            float falloff = useDistanceFalloff ? 1f / Mathf.Max(1f, distance * distance) : 1f;
+            float effectiveIntensity = sourceIntensity * falloff;
+            if (effectiveIntensity < minSourceIntensity)
+                continue;
 
-        if (angleToFace > sourceHalfCone + faceAngularRadius)
-        {
-            DisableReflection();
-            return;
-        }
+            // --- Cone check ---
+            float sourceHalfCone = srcLight.type == LightType.Spot ? srcLight.spotAngle / 2f : 90f;
+            float angleToFace = Vector3.Angle(source.forward, toFaceCenter);
 
-        // Try to find the exact hit point on the mirror face
-        Vector3 reflectOrigin = faceCenter;
-        float denom = Vector3.Dot(lightSource.forward, faceNormal);
-        if (denom < 0f)
-        {
-            float t = Vector3.Dot(faceCenter - lightSource.position, faceNormal) / denom;
-            if (t > 0f)
+            float halfW, halfH;
+            GetFaceHalfExtents(out halfW, out halfH);
+            float faceAngularRadius = Mathf.Atan(Mathf.Max(halfW, halfH) / Mathf.Max(distance, 0.001f)) * Mathf.Rad2Deg;
+
+            if (angleToFace > sourceHalfCone + faceAngularRadius)
+                continue;
+
+            // --- Raycast: line of sight ---
+            Vector3 rayOrigin = source.position;
+            Vector3 rayDir = (faceCenter - source.position).normalized;
+            float rayDist = distance - 0.1f;
+            if (Physics.Raycast(rayOrigin, rayDir, out RaycastHit blockHit, rayDist, blockingMask))
             {
-                Vector3 hitPoint = lightSource.position + lightSource.forward * t;
-                if (IsPointOnFace(hitPoint, faceCenter, faceNormal))
-                    reflectOrigin = hitPoint;
+                GameObject hitObj = blockHit.collider.gameObject;
+                if (hitObj != gameObject
+                    && hitObj != source.gameObject
+                    && !source.IsChildOf(hitObj.transform)
+                    && !hitObj.transform.IsChildOf(source))
+                {
+                    continue;
+                }
             }
-        }
 
-        spotLight.enabled = true;
+            // --- Valid source found! ---
+            activeSource = source;
 
-        // Compute reflection
-        Vector3 incomingDir = (reflectOrigin - lightSource.position).normalized;
-        Vector3 reflectedDir = Vector3.Reflect(incomingDir, faceNormal);
+            // Find exact hit point on face
+            Vector3 reflectOrigin = faceCenter;
+            float denom = Vector3.Dot(source.forward, faceNormal);
+            if (denom < 0f)
+            {
+                float t = Vector3.Dot(faceCenter - source.position, faceNormal) / denom;
+                if (t > 0f)
+                {
+                    Vector3 hitPoint = source.position + source.forward * t;
+                    if (IsPointOnFace(hitPoint, faceCenter, faceNormal))
+                        reflectOrigin = hitPoint;
+                }
+            }
 
-        spotLight.transform.position = reflectOrigin;
-        spotLight.transform.rotation = Quaternion.LookRotation(reflectedDir);
+            spotLight.enabled = true;
 
-        spotLight.intensity = sourceIntensity * intensityMultiplier * falloff;
+            Vector3 incomingDir = (reflectOrigin - source.position).normalized;
+            Vector3 reflectedDir = Vector3.Reflect(incomingDir, faceNormal);
 
-        if (autoCreatedLight)
-        {
-            spotLight.color = spotColor;
+            spotLight.transform.position = reflectOrigin;
+            spotLight.transform.rotation = Quaternion.LookRotation(reflectedDir);
+            spotLight.intensity = sourceIntensity * intensityMultiplier * falloff;
             spotLight.range = spotRange;
+            spotLight.color = spotColor;
+            spotLight.spotAngle = spotAngle;
+
+            return;
         }
 
+        // No valid source found.
+        activeSource = null;
+        DisableReflection();
     }
 
     void DisableReflection()
     {
-        spotLight.enabled = false;
         spotLight.intensity = 0f;
+        spotLight.enabled = false;
     }
 
     bool IsPointOnFace(Vector3 worldPoint, Vector3 faceCenter, Vector3 faceNormal)
@@ -229,39 +247,40 @@ public class MirrorReflection : MonoBehaviour
         Gizmos.DrawRay(faceCenter, faceNormal * 1.5f);
         Gizmos.DrawWireSphere(faceCenter, 0.05f);
 
-        if (lightSource != null)
+        if (lightSources == null) return;
+
+        foreach (Transform source in lightSources)
         {
+            if (source == null) continue;
+
+            Light srcLight = source.GetComponent<Light>();
+            if (srcLight == null) continue;
+
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(lightSource.position, 0.15f);
+            Gizmos.DrawWireSphere(source.position, 0.15f);
 
-            // Spotlight forward ray
             Gizmos.color = Color.yellow;
-            Gizmos.DrawRay(lightSource.position, lightSource.forward * 10f);
+            Gizmos.DrawRay(source.position, source.forward * 10f);
 
-            // Cone check visualization
-            Light srcLight = lightSource.GetComponent<Light>();
-            float halfCone = srcLight != null && srcLight.type == LightType.Spot
-                ? srcLight.spotAngle / 2f : 90f;
+            float halfCone = srcLight.type == LightType.Spot ? srcLight.spotAngle / 2f : 90f;
 
-            Vector3 toFace = faceCenter - lightSource.position;
-            float angleToFace = Vector3.Angle(lightSource.forward, toFace);
+            Vector3 toFace = faceCenter - source.position;
+            float angleToFace = Vector3.Angle(source.forward, toFace);
             float dist = toFace.magnitude;
 
             float halfW, halfH;
             GetFaceHalfExtents(out halfW, out halfH);
             float faceAngRad = Mathf.Atan(Mathf.Max(halfW, halfH) / Mathf.Max(dist, 0.001f)) * Mathf.Rad2Deg;
 
-            // Green if face is in cone, red if not
-            bool inCone = Vector3.Dot(faceNormal, lightSource.position - faceCenter) > 0f
+            bool inCone = Vector3.Dot(faceNormal, source.position - faceCenter) > 0f
                        && angleToFace <= halfCone + faceAngRad;
 
             Gizmos.color = inCone ? Color.green : Color.red;
-            Gizmos.DrawLine(lightSource.position, faceCenter);
+            Gizmos.DrawLine(source.position, faceCenter);
 
             if (inCone)
             {
-                // Draw reflected ray
-                Vector3 incomingDir = (faceCenter - lightSource.position).normalized;
+                Vector3 incomingDir = (faceCenter - source.position).normalized;
                 Vector3 reflectedDir = Vector3.Reflect(incomingDir, faceNormal);
                 Gizmos.color = Color.green;
                 Gizmos.DrawRay(faceCenter, reflectedDir * 3f);
@@ -325,6 +344,7 @@ public class MirrorReflection : MonoBehaviour
         spotLight.range = spotRange;
         spotLight.color = spotColor;
         spotLight.intensity = 0f;
+        spotLight.shadows = LightShadows.Hard;
     }
 
     void DrawFaceQuad(Vector3 center, Vector3 normal)
