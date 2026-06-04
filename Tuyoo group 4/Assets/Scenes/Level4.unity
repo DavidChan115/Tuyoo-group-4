@@ -291,7 +291,7 @@ MonoBehaviour:
   - {fileID: 806890722}
   - {fileID: 643636020}
   - {fileID: 1571017589}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 5.76
   yOffset: 0.05
@@ -642,6 +642,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: player
       objectReference: {fileID: 0}
+    - target: {fileID: 5723005307145365926, guid: 1264fde20f005134498beb2e3af2fa71, type: 3}
+      propertyPath: m_TagString
+      value: MainCamera
+      objectReference: {fileID: 0}
     - target: {fileID: 6259523967697944790, guid: 1264fde20f005134498beb2e3af2fa71, type: 3}
       propertyPath: m_Range
       value: 20
@@ -761,7 +765,7 @@ MonoBehaviour:
   - {fileID: 1571017589}
   - {fileID: 643636020}
   - {fileID: 806890722}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0
   yOffset: 0.05
@@ -1077,7 +1081,7 @@ MonoBehaviour:
   - {fileID: 1571017589}
   - {fileID: 643636020}
   - {fileID: 806890722}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0
   yOffset: 0.05
@@ -2293,7 +2297,7 @@ MonoBehaviour:
   - {fileID: 1571017589}
   - {fileID: 643636020}
   - {fileID: 806890722}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0
   yOffset: 0.05
@@ -2491,7 +2495,7 @@ MonoBehaviour:
   - {fileID: 1571017589}
   - {fileID: 643636020}
   - {fileID: 806890722}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0
   yOffset: 0.05
@@ -2656,9 +2660,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1266818253}
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
-      propertyPath: nextScene
-      value: 
-      objectReference: {fileID: 102900000, guid: 4f6f59153c1cf624b8dc81b4d70ef1ca, type: 3}
+      propertyPath: nextSceneName
+      value: MainMenuScene
+      objectReference: {fileID: 0}
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
       propertyPath: incompletePanel
       value: 

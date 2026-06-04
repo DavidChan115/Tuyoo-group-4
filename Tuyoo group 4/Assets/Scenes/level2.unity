@@ -2367,6 +2367,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 766c816938e2f2a4d99d1c0c95c79db5, type: 3}
+--- !u!1 &618946514 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6418094994336162407, guid: 766c816938e2f2a4d99d1c0c95c79db5, type: 3}
+  m_PrefabInstance: {fileID: 618946513}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &638906936
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2618,7 +2623,7 @@ MonoBehaviour:
   groundObjects:
   - {fileID: 1602778316}
   - {fileID: 376339584}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0.2
   yOffset: 0
@@ -2821,7 +2826,7 @@ MonoBehaviour:
   - {fileID: 756844560}
   - {fileID: 1602778316}
   - {fileID: 928000945}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0.2
   yOffset: 0
@@ -6639,7 +6644,7 @@ MonoBehaviour:
   - {fileID: 756844560}
   - {fileID: 1602778316}
   - {fileID: 928000945}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0
   yOffset: 0.05
@@ -6915,7 +6920,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 501480342}
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
-      propertyPath: nextScene
+      propertyPath: nextSceneName
+      value: Real level2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
+      propertyPath: incompletePanel
       value: 
       objectReference: {fileID: 102900000, guid: 23029d95394b4334bad9ccb27656a8ae, type: 3}
     - target: {fileID: 3378836375991766531, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}

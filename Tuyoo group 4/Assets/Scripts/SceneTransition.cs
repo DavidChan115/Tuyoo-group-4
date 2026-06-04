@@ -84,8 +84,9 @@ public class SceneTransition : MonoBehaviour
         {
             case "SampleScene": return "Tutorial: Step on the Shadow";
             case "level2":      return "Level 1: Multi Shadows";
-            case "Real level2": return "Level 2: Movable";
-            case "Level3":      return "Level 3: Reflection";
+            case "Real level2": return "Level 2: Movable Objects";
+            case "Level3":      return "Level 3: Mirror Reflection";
+            case "Level4":      return "Level 4: Chain Reflection";
             default:            return sceneName;
         }
     }

@@ -260,7 +260,7 @@ MonoBehaviour:
   - {fileID: 1566639409}
   - {fileID: 1907913549}
   - {fileID: 2032275483}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 5.76
   yOffset: 0.05
@@ -1126,7 +1126,7 @@ MonoBehaviour:
   - {fileID: 1566639409}
   - {fileID: 1907913549}
   - {fileID: 2032275483}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 5.76
   yOffset: 0.05
@@ -3879,7 +3879,7 @@ MonoBehaviour:
   - {fileID: 1566639409}
   - {fileID: 1907913549}
   - {fileID: 2032275483}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 5.76
   yOffset: 0.05
@@ -4602,7 +4602,7 @@ MonoBehaviour:
   - {fileID: 1566639409}
   - {fileID: 1907913549}
   - {fileID: 2032275483}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 5.76
   yOffset: 0.05
@@ -10503,9 +10503,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1228604856}
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
-      propertyPath: nextScene
-      value: 
-      objectReference: {fileID: 102900000, guid: 41ad27e2e0176b543bbf0b453b47440f, type: 3}
+      propertyPath: nextSceneName
+      value: Level3
+      objectReference: {fileID: 0}
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
       propertyPath: incompletePanel
       value: 

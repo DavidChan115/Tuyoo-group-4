@@ -62,11 +62,16 @@ public class ShadowPlatform : MonoBehaviour
         }
         else
         {
-            Shader shader = Shader.Find("Mobile/Particles/Alpha Blended");
-            if (shader == null) shader = Shader.Find("Legacy Shaders/Particles/Alpha Blended");
-            if (shader == null) shader = Shader.Find("Unlit/Color");
+            // Use URP Unlit — guaranteed included in URP builds, unlike Built-in shaders.
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+            {
+                Debug.LogError("[ShadowPlatform] URP/Unlit shader not found. Assign a material in the Inspector.");
+                return;
+            }
             Material mat = new Material(shader);
-            mat.color = new Color(0, 0, 0, 1f);
+            mat.color = new Color(0, 0, 0, 0.6f);
+            mat.SetFloat("_Surface", 1f); // Transparent
             meshRenderer.material = mat;
         }
 

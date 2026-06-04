@@ -3181,7 +3181,7 @@ MonoBehaviour:
   groundObjects:
   - {fileID: 165512565}
   - {fileID: 242563563}
-  shadowMaterial: {fileID: 0}
+  shadowMaterial: {fileID: 2100000, guid: a40459485615be744927e92defac2517, type: 2}
   enforceSpotCone: 0
   groundY: 0.2
   yOffset: 0
@@ -4020,6 +4020,10 @@ PrefabInstance:
       propertyPath: uiPanel
       value: 
       objectReference: {fileID: 827266567}
+    - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
+      propertyPath: nextSceneName
+      value: level2
+      objectReference: {fileID: 0}
     - target: {fileID: 1811788482408145988, guid: 0100afbcc5f9cfa43a90dd4becd492b8, type: 3}
       propertyPath: incompletePanel
       value: 
