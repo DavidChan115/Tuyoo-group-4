@@ -6,7 +6,7 @@ public class MainMenu : MonoBehaviour
     {
         PlayerPrefs.DeleteKey("LastLevel");
         PlayerPrefs.Save();
-        SceneTransition.Instance.TransitionToScene("SampleScene", SceneTransition.GetLevelDisplayName("SampleScene"));
+        SceneTransition.Instance.TransitionToScene("IntroVideo", "");
     }
 
     public void LoadGame()
