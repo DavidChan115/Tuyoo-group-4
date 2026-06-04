@@ -124,6 +124,7 @@ public class MirrorReflection : MonoBehaviour
                 GameObject hitObj = blockHit.collider.gameObject;
                 if (hitObj != gameObject
                     && hitObj != source.gameObject
+                    && !hitObj.CompareTag("Player")
                     && !source.IsChildOf(hitObj.transform)
                     && !hitObj.transform.IsChildOf(source))
                 {
