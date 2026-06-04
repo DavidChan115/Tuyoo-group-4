@@ -26,7 +26,7 @@ public class PauseMenu : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (RespawnOnFall.DeathScreenActive || FinishTrigger.EndpointReached)
+            if (RespawnOnFall.DeathScreenActive || FinishTrigger.LevelEndTriggered)
                 return;
 
             TogglePause();
