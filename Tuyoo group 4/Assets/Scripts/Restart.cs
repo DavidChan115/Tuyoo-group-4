@@ -71,6 +71,7 @@ public class RespawnOnFall : MonoBehaviour
     public void RestartScene()
     {
         Time.timeScale = 1f;
+        DeathScreenActive = false;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -85,31 +86,7 @@ public class RespawnOnFall : MonoBehaviour
 
     public void TryAgain()
     {
-        if (deadPlayer == null) return;
-
-        //deadPlayer.transform.position = initialPosition;
-        //deadPlayer.transform.rotation = initialRotation;
         RestartScene();
-
-
-
-        PlayerController controller = deadPlayer.GetComponent<PlayerController>();
-        if (controller != null) controller.enabled = true;
-
-        Rigidbody rb = deadPlayer.GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.isKinematic = false;
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        DeathScreenActive = false;
-        deathCanvas.SetActive(false);
-        isDead = false;
     }
 
 

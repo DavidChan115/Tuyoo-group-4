@@ -143,6 +143,7 @@ MonoBehaviour:
   player: {fileID: 8276842338751914757}
   heldLocalPosition: {x: -0.1, y: 0.43, z: -0.8}
   flySpeed: 8
+  flySpeed: 20
   flySnapDistance: 0.1
   spotLight: {fileID: 6259523967697944790}
   baseIntensity: 30
@@ -404,6 +405,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.70782274, z: -0, w: -0.7063902}
   m_LocalPosition: {x: -7.090864, y: 1.34, z: 3.1787517}
+  m_LocalPosition: {x: 8.67, y: 2.7, z: -21.677994}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -533,15 +535,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Test1
   moveSpeed: 5
+  gameCamera: {fileID: 0}
+  moveSpeed: 6
   jumpForce: 5
   rotationSpeed: 12
   pushMassFactor: 0.15
   pushMinSpeedMultiplier: 0.2
+  pushRotationSlowdown: 20
   pushDetectionRadius: 2.5
   pushPlaceDistance: 1.5
   pushableMask:
     serializedVersion: 2
     m_Bits: 4294967295
+    m_Bits: 128
   groundCheckDistance: 1.1
   groundMask:
     serializedVersion: 2
@@ -1290,6 +1296,7 @@ GameObject:
   m_Layer: 0
   m_Name: Character camera
   m_TagString: Player
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1304,6 +1311,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.1885593, y: 0.6821393, z: -0.18894169, w: -0.6807587}
   m_LocalPosition: {x: 4.9999905, y: 3, z: 0.010130405}
+  m_LocalPosition: {x: 4.9999905, y: 2.9999998, z: 0.010130405}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1619,6 +1627,7 @@ MonoBehaviour:
   player: {fileID: 8276842338751914757}
   heldLocalPosition: {x: -0.1, y: 0.43, z: -0.8}
   flySpeed: 8
+  flySpeed: 20
   flySnapDistance: 0.1
   spotLight: {fileID: 0}
   baseIntensity: 30
