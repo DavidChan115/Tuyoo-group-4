@@ -9,9 +9,13 @@ public class FinishTrigger : MonoBehaviour
 {
     public static bool EndpointReached { get; private set; }
 
+    // True for BOTH full and half completion — blocks pause menu and other input
+    // from the moment the player touches the endpoint.
+    public static bool LevelEndTriggered { get; private set; }
+
     [Header("Scene")]
-    [Tooltip("Drag the next scene asset here.")]
-    public Object nextScene;
+    [Tooltip("Type the exact name of the next scene (as it appears in Build Settings).")]
+    public string nextSceneName;
 
     [Header("UI")]
     [Tooltip("Optional: assign a pre-made Canvas to override the auto-created one.")]
@@ -27,6 +31,7 @@ public class FinishTrigger : MonoBehaviour
     void Start()
     {
         EndpointReached = false;
+        LevelEndTriggered = false;
 
         if (uiPanel != null)
         {
@@ -73,6 +78,7 @@ public class FinishTrigger : MonoBehaviour
             return;
 
         triggered = true;
+        LevelEndTriggered = true;
 
         // ── Common: disable player, free cursor ──
         PlayerController controller = other.GetComponent<PlayerController>();
@@ -136,13 +142,13 @@ public class FinishTrigger : MonoBehaviour
 
     public void NextLevel()
     {
-        if (nextScene == null)
+        if (string.IsNullOrEmpty(nextSceneName))
             return;
 
         if (SceneTransition.Instance != null)
-            SceneTransition.Instance.TransitionToScene(nextScene.name, SceneTransition.GetLevelDisplayName(nextScene.name));
+            SceneTransition.Instance.TransitionToScene(nextSceneName, SceneTransition.GetLevelDisplayName(nextSceneName));
         else
-            SceneManager.LoadScene(nextScene.name);
+            SceneManager.LoadScene(nextSceneName);
     }
 
     void BuildFinishUI()
