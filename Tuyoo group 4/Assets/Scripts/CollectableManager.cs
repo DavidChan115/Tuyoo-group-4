@@ -15,10 +15,21 @@ public class CollectableManager : MonoBehaviour
     {
         if (Instance != null)
         {
-            Destroy(gameObject);
-            return;
+            if (Instance.counterText == null && counterText != null)
+            {
+                Destroy(Instance.gameObject);
+                Instance = this;
+            }
+            else
+            {
+                Destroy(gameObject);
+                return;
+            }
         }
-        Instance = this;
+        else
+        {
+            Instance = this;
+        }
 
         totalCount = FindObjectsByType<Collectable>().Length;
         UpdateDisplay();
