@@ -3,6 +3,8 @@ using System.Collections.Generic;
 
 public class ShadowPlatform : MonoBehaviour
 {
+    // In Unity, you can group and organize your variables in the Inspector window using the [Header] attribute. 
+    // This attribute places "a bold title text above your fields", visually categorizing large collections of public or serialized variable
     [Header("References")]
     public Light[] lights;
     public GameObject shadowCaster;
