@@ -6,7 +6,7 @@ public class ShadowPlatform : MonoBehaviour
     // In Unity, you can group and organize your variables in the Inspector window using the [Header] attribute. 
     // This attribute places "a bold title text above your fields", visually categorizing large collections of public or serialized variable
     [Header("References")]
-    public Light[] lights;
+    public Light[] lights; // Option under the [Header] attribute
     public GameObject shadowCaster;
     public GameObject[] groundObjects;
     public Material shadowMaterial;
@@ -30,6 +30,16 @@ public class ShadowPlatform : MonoBehaviour
     public float shadowNearOpacity = 0.6f;
     [Range(0f, 1f)]
     public float shadowFarOpacity = 0f;
+
+    [Header("Fade In")]
+    [Tooltip("Seconds for the shadow to fade from fully transparent to its target opacity when it first appears.")]
+    public float fadeInDuration = 0.7f;
+
+    // Runtime fade state
+    private float fadeAlpha = 0f;        // 0 = invisible, 1 = full opacity
+    private bool wasShadowVisible = false;
+    private Material matInstance;        // per-renderer instance; never modifies the shared/source material
+    private Color matOrigColor;          // original colour at full opacity, cached once in Start
 
     private GameObject platformChild;
     private Mesh shadowMesh;
@@ -80,6 +90,15 @@ public class ShadowPlatform : MonoBehaviour
         meshCollider = platformChild.AddComponent<MeshCollider>();
         meshCollider.convex = false;
         meshCollider.isTrigger = false;
+        meshCollider.enabled = false; // disabled until shadow fully fades in
+
+        // Cache a per-renderer material instance so runtime alpha changes
+        // never affect the original shared/source material asset.
+        matInstance = meshRenderer.material;
+        matOrigColor = matInstance.color;
+        Color startTransparent = matOrigColor;
+        startTransparent.a = 0f;
+        matInstance.color = startTransparent; // start invisible; Update() animates alpha in
     }
 
     void Update()
@@ -88,13 +107,39 @@ public class ShadowPlatform : MonoBehaviour
         {
             meshCollider.enabled = false;
             debugHasShadow = false;
+            fadeAlpha = 0f;
+            wasShadowVisible = false;
             return;
         }
 
         if (shadowCaster == null)
             shadowCaster = gameObject;
 
+        // Reset the fade counter the moment the shadow re-appears from nothing.
+        if (!wasShadowVisible)
+            fadeAlpha = 0f;
+
         UpdateShadow();
+
+        // Animate fade-in while the shadow is present; reset instantly when absent.
+        if (debugHasShadow)
+            fadeAlpha = Mathf.MoveTowards(fadeAlpha, 1f,
+                Time.deltaTime / Mathf.Max(fadeInDuration, 0.001f));
+        else
+            fadeAlpha = 0f;
+
+        wasShadowVisible = debugHasShadow;
+
+        // Animate material alpha — this drives the visual fade reliably regardless
+        // of whether the assigned material reads vertex-colour alpha.
+        if (matInstance != null)
+            matInstance.color = new Color(matOrigColor.r, matOrigColor.g, matOrigColor.b,
+                                          matOrigColor.a * fadeAlpha);
+
+        // Collider is only solid once the shadow has fully materialised.
+        // While fading in the player falls through, enforcing the mechanic.
+        if (meshCollider != null)
+            meshCollider.enabled = debugHasShadow && (fadeAlpha >= 1f);
     }
 
     void UpdateShadow()
@@ -247,7 +292,7 @@ public class ShadowPlatform : MonoBehaviour
         BuildMesh(hull, objRadius);
         meshCollider.sharedMesh = null;
         meshCollider.sharedMesh = shadowMesh;
-        meshCollider.enabled = true;
+        // Collider activation is managed by Update() once fadeAlpha reaches 1.
     }
 
     Rect? GetGroundBoundsXZ()
@@ -490,7 +535,7 @@ public class ShadowPlatform : MonoBehaviour
             verts[i + n] = new Vector3(hullXZ[i].x, flatY - thickness, hullXZ[i].y);
 
             float t = Mathf.Clamp01((distFromCenter[i] - cylinderRadius) / fadeRange);
-            float alpha = Mathf.Lerp(shadowNearOpacity, shadowFarOpacity, t);
+            float alpha = Mathf.Lerp(shadowNearOpacity, shadowFarOpacity, t); // spatial gradient only
             Color vc = new Color(0f, 0f, 0f, alpha);
             colors[i]     = vc;
             colors[i + n] = vc;
