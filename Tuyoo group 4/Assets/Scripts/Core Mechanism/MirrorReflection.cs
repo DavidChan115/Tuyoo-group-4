@@ -34,6 +34,18 @@ public class MirrorReflection : MonoBehaviour
     public Color spotColor = Color.white;
     [Tooltip("Optional — assign your own Light. If empty, one is created automatically.")]
     public Light customReflectionLight;
+    [Tooltip("Show the reflected spotlight's colored projection on ground and walls. Turning this off does not disable the volumetric beam or shadow-platform calculations.")]
+    public bool displaySpotColorOnSurfaces = true;
+
+    [Header("Reflected Beam Display")]
+    [Tooltip("Show the volumetric ray effect for this mirror. This does not disable the reflected gameplay light.")]
+    public bool displayReflectedBeam = true;
+    [Tooltip("Visible beam length. Set to 0 to follow Reflected Spotlight > Spot Range.")]
+    [Min(0f)]
+    public float reflectedBeamDisplayRange = 0f;
+    [Tooltip("Brightness/density of the transparent reflected beam effect.")]
+    [Range(0f, 0.2f)]
+    public float reflectedBeamDisplayIntensity = 0.04f;
 
     [Header("Blocking")]
     [Tooltip("Objects on these layers will block the light from reaching the mirror.")]
@@ -45,6 +57,10 @@ public class MirrorReflection : MonoBehaviour
     private Light spotLight;
     private bool autoCreatedLight;
     private BoxCollider boxCol;
+    private int originalReflectionCullingMask;
+
+    /// <summary>The spotlight this mirror drives (custom or auto-created).</summary>
+    public Light ReflectionLight => spotLight;
 
     // Track which source is active this frame (for gizmos)
     private Transform activeSource;
@@ -64,10 +80,15 @@ public class MirrorReflection : MonoBehaviour
             CreateSpotlight();
             autoCreatedLight = true;
         }
+
+        originalReflectionCullingMask = spotLight.cullingMask;
+        ApplySurfaceDisplay();
     }
 
     void Update()
     {
+        ApplySurfaceDisplay();
+
         if (lightSources == null || lightSources.Length == 0 || spotLight == null)
         {
             DisableReflection();
@@ -135,24 +156,18 @@ public class MirrorReflection : MonoBehaviour
             // --- Valid source found! ---
             activeSource = source;
 
-            // Find exact hit point on face
+            // The reflected spotlight always leaves from the centre of the
+            // mirror face, matching the gizmo and keeping the beam anchored
+            // to the mirror regardless of where the source cone lands on it.
             Vector3 reflectOrigin = faceCenter;
-            float denom = Vector3.Dot(source.forward, faceNormal);
-            if (denom < 0f)
-            {
-                float t = Vector3.Dot(faceCenter - source.position, faceNormal) / denom;
-                if (t > 0f)
-                {
-                    Vector3 hitPoint = source.position + source.forward * t;
-                    if (IsPointOnFace(hitPoint, faceCenter, faceNormal))
-                        reflectOrigin = hitPoint;
-                }
-            }
 
             spotLight.enabled = true;
 
-            Vector3 incomingDir = (reflectOrigin - source.position).normalized;
-            Vector3 reflectedDir = Vector3.Reflect(incomingDir, faceNormal);
+            // Reflect the spotlight's actual center axis. Using the direction
+            // from the source to the face center tilts the result whenever only
+            // the edge of the source cone reaches the mirror.
+            Vector3 incomingDir = source.forward.normalized;
+            Vector3 reflectedDir = Vector3.Reflect(incomingDir, faceNormal).normalized;
 
             spotLight.transform.position = reflectOrigin;
             spotLight.transform.rotation = Quaternion.LookRotation(reflectedDir);
@@ -173,6 +188,18 @@ public class MirrorReflection : MonoBehaviour
     {
         spotLight.intensity = 0f;
         spotLight.enabled = false;
+    }
+
+    void ApplySurfaceDisplay()
+    {
+        if (spotLight == null)
+            return;
+
+        // A zero culling mask prevents the Unity Light from coloring renderers,
+        // while the Light stays enabled for ShadowPlatform's gameplay checks.
+        spotLight.cullingMask = displaySpotColorOnSurfaces
+            ? originalReflectionCullingMask
+            : 0;
     }
 
     bool IsPointOnFace(Vector3 worldPoint, Vector3 faceCenter, Vector3 faceNormal)
@@ -227,6 +254,9 @@ public class MirrorReflection : MonoBehaviour
 
     void OnDestroy()
     {
+        if (!autoCreatedLight && spotLight != null)
+            spotLight.cullingMask = originalReflectionCullingMask;
+
         if (autoCreatedLight && spotLight != null)
             Destroy(spotLight.gameObject);
     }
@@ -281,7 +311,7 @@ public class MirrorReflection : MonoBehaviour
 
             if (inCone)
             {
-                Vector3 incomingDir = (faceCenter - source.position).normalized;
+                Vector3 incomingDir = source.forward.normalized;
                 Vector3 reflectedDir = Vector3.Reflect(incomingDir, faceNormal);
                 Gizmos.color = Color.green;
                 Gizmos.DrawRay(faceCenter, reflectedDir * 3f);
