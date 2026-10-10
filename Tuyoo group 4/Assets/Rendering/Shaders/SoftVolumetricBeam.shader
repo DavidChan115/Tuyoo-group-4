@@ -6,6 +6,9 @@
 // the same angular / distance falloff a real spotlight has. This keeps the
 // beam consistent from every viewing angle and removes the flat-plane
 // "fan" artifacts of the previous crossed-quad approach.
+//
+// Each sample is also tested against the spotlight's own URP shadow map, so
+// objects between the light and the sample carve a dark shaft out of the beam.
 Shader "ShadowBridge/Soft Volumetric Beam"
 {
     Properties
@@ -27,6 +30,7 @@ Shader "ShadowBridge/Soft Volumetric Beam"
         _NoiseStrength("Noise Strength", Range(0, 1)) = 0.35
         _Steps("Ray March Steps", Float) = 16
         _UseSceneDepth("Use Scene Depth", Float) = 1
+        _UseLightShadows("Use Light Shadows", Float) = 1
     }
 
     SubShader
@@ -56,7 +60,10 @@ Shader "ShadowBridge/Soft Volumetric Beam"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
             struct Attributes
@@ -86,7 +93,82 @@ Shader "ShadowBridge/Soft Volumetric Beam"
                 float _NoiseStrength;
                 float _Steps;
                 float _UseSceneDepth;
+                float _UseLightShadows;
             CBUFFER_END
+
+            // URP exposes no light ID to shaders, so locate this spotlight in the
+            // visible-light arrays by matching its world position and direction.
+            int FindAdditionalLightIndex(float3 lightPos, float3 lightAxis)
+            {
+                #if defined(_ADDITIONAL_LIGHT_SHADOWS)
+                    #if USE_CLUSTER_LIGHT_LOOP
+                        int count = min(MAX_VISIBLE_LIGHTS, (int)(_FPParams0.z + _FPParams0.w));
+                    #else
+                        int count = MAX_VISIBLE_LIGHTS;
+                    #endif
+
+                    [loop]
+                    for (int i = 0; i < count; i++)
+                    {
+                        float4 position = _AdditionalLightsPosition[i];
+                        float3 offset = position.xyz - lightPos;
+                        // URP stores spot direction pointing back toward the light.
+                        if (position.w > 0.5 &&
+                            dot(offset, offset) < 1e-4 &&
+                            dot((float3)_AdditionalLightsSpotDir[i].xyz, -lightAxis) > 0.99)
+                            return i;
+                    }
+                #endif
+                return -1;
+            }
+
+            // The gameplay shadow test is a single depth compare, so it cuts the
+            // beam on the exact silhouette. Average a few compares spread a short
+            // distance sideways from the light ray: the shadow's interior stays
+            // fully dark, and only the edge fades.
+            #if defined(_ADDITIONAL_LIGHT_SHADOWS)
+            float BeamOcclusion(int lightIndex, float3 positionWS, float3 towardLight,
+                                half4 shadowParams, ShadowSamplingData sampling)
+            {
+                int slice = (int)shadowParams.w;
+                if (slice < 0)
+                    return 1.0;
+
+                // Point lights use six slices; keep URP's own test for them.
+                if (shadowParams.z > 0.5)
+                    return AdditionalLightRealtimeShadow(lightIndex, positionWS, towardLight, shadowParams, sampling);
+
+                #if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
+                    float4x4 worldToShadow = _AdditionalLightsWorldToShadow_SSBO[slice];
+                #else
+                    float4x4 worldToShadow = _AdditionalLightsWorldToShadow[slice];
+                #endif
+
+                float4 coord = mul(worldToShadow, float4(positionWS, 1.0));
+                coord.xyz /= coord.w;
+                if (coord.z <= 0.0 || coord.z >= 1.0)
+                    return 1.0;
+
+                float3 sideAxis = abs(towardLight.y) > 0.99 ? float3(1, 0, 0) : float3(0, 1, 0);
+                float3 side = normalize(cross(towardLight, sideAxis));
+                float3 lift = cross(side, towardLight);
+
+                // Feather width in metres. Small enough that a solid occluder
+                // still blocks the beam completely behind its centre.
+                const float feather = 0.28;
+                float4 sideCoord = mul(worldToShadow, float4(positionWS + side * feather, 1.0));
+                float4 liftCoord = mul(worldToShadow, float4(positionWS + lift * feather, 1.0));
+                float2 sideOffset = sideCoord.xy / sideCoord.w - coord.xy;
+                float2 liftOffset = liftCoord.xy / liftCoord.w - coord.xy;
+
+                float occlusion = SAMPLE_TEXTURE2D_SHADOW(_AdditionalLightsShadowmapTexture, sampler_LinearClampCompare, coord.xyz);
+                occlusion += SAMPLE_TEXTURE2D_SHADOW(_AdditionalLightsShadowmapTexture, sampler_LinearClampCompare, float3(coord.xy + sideOffset, coord.z));
+                occlusion += SAMPLE_TEXTURE2D_SHADOW(_AdditionalLightsShadowmapTexture, sampler_LinearClampCompare, float3(coord.xy - sideOffset, coord.z));
+                occlusion += SAMPLE_TEXTURE2D_SHADOW(_AdditionalLightsShadowmapTexture, sampler_LinearClampCompare, float3(coord.xy + liftOffset, coord.z));
+                occlusion += SAMPLE_TEXTURE2D_SHADOW(_AdditionalLightsShadowmapTexture, sampler_LinearClampCompare, float3(coord.xy - liftOffset, coord.z));
+                return occlusion * 0.2;
+            }
+            #endif
 
             float Hash31(float3 p)
             {
@@ -252,7 +334,9 @@ Shader "ShadowBridge/Soft Volumetric Beam"
                 if (!IntersectCappedCone(ro, rd, apex, axis, _CosOuter, coneLength, tEnter, tExit))
                     return half4(0, 0, 0, 0);
 
-                // Stop the beam where it meets opaque geometry.
+                // Stop the beam where it meets opaque geometry. tScene stays large
+                // when the depth texture is unavailable, so the fade below is 1.
+                float tScene = 1e6;
                 if (_UseSceneDepth > 0.5)
                 {
                     float2 screenUV = input.positionCS.xy / _ScaledScreenParams.xy;
@@ -262,7 +346,7 @@ Shader "ShadowBridge/Soft Volumetric Beam"
                         float rawDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, SampleSceneDepth(screenUV));
                     #endif
                     float3 scenePos = ComputeWorldSpacePosition(screenUV, rawDepth, UNITY_MATRIX_I_VP);
-                    float tScene = dot(scenePos - ro, rd);
+                    tScene = dot(scenePos - ro, rd);
                     tExit = min(tExit, tScene);
                 }
 
@@ -277,10 +361,29 @@ Shader "ShadowBridge/Soft Volumetric Beam"
                 float3 noiseDrift = axis * (_Time.y * _NoiseSpeed);
                 float energy = 0.0;
 
+                #if defined(_ADDITIONAL_LIGHT_SHADOWS)
+                    int lightIndex = _UseLightShadows > 0.5 ? FindAdditionalLightIndex(apex, axis) : -1;
+                    half4 shadowParams = half4(0, 0, 0, -1);
+                    ShadowSamplingData shadowSampling = (ShadowSamplingData)0;
+                    if (lightIndex >= 0)
+                    {
+                        shadowParams = GetAdditionalLightShadowParams(lightIndex);
+                        shadowSampling = GetAdditionalLightShadowSamplingData(lightIndex);
+                    }
+                #endif
+
                 [loop]
                 for (int i = 0; i < steps; i++)
                 {
-                    float3 p = ro + rd * t;
+                    float sampleT = t;
+                    float3 p = ro + rd * sampleT;
+                    t += stepLength;
+
+                    // Dissolve over a short distance before the surface instead of
+                    // ending on it. Samples never continue past tScene, so the
+                    // beam cannot show through the object.
+                    float approach = smoothstep(0.0, 1.2, tScene - sampleT);
+
                     float3 toP = p - apex;
                     float dAlong = dot(toP, axis);
                     float dist = length(toP) + 1e-4;
@@ -289,21 +392,35 @@ Shader "ShadowBridge/Soft Volumetric Beam"
                     float cosA = dAlong / dist;
                     float angular = smoothstep(_CosOuter, _CosInner, cosA);
 
-                    // Inverse-square style falloff normalised to the cone length,
-                    // plus URP-like smooth range window so the beam ends cleanly.
-                    float distAtt = 1.0 / (1.0 + _Falloff * dist * dist * invLength2);
+                    // URP-like smooth range window so the beam ends cleanly.
                     float r2 = dAlong * dAlong * invLength2;
                     float window = saturate(1.0 - r2 * r2);
                     window *= window;
 
+                    float lit = angular * window;
+                    // Outside the cone the shadow-atlas lookup would read a
+                    // neighbouring light's slice, so skip it there.
+                    if (lit <= 0.0)
+                        continue;
+
+                    #if defined(_ADDITIONAL_LIGHT_SHADOWS)
+                        if (lightIndex >= 0)
+                        {
+                            lit *= BeamOcclusion(lightIndex, p, -toP / dist, shadowParams, shadowSampling);
+                            if (lit <= 0.0)
+                                continue;
+                        }
+                    #endif
+
+                    // Inverse-square style falloff normalised to the cone length.
+                    float distAtt = 1.0 / (1.0 + _Falloff * dist * dist * invLength2);
                     float apexFade = smoothstep(0.0, max(_ApexFade, 1e-3), dAlong);
 
                     // Drifting dust so the beam feels like real scattering media.
                     float n = ValueNoise(p * _NoiseScale - noiseDrift);
                     float density = 1.0 - _NoiseStrength + _NoiseStrength * 2.0 * n;
 
-                    energy += angular * distAtt * window * apexFade * density * stepLength;
-                    t += stepLength;
+                    energy += lit * distAtt * apexFade * density * approach * stepLength;
                 }
 
                 // Beer-Lambert style soft ceiling: linear for thin glancing views,

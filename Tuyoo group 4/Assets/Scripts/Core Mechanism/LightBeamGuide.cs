@@ -57,6 +57,9 @@ public class LightBeamGuide : MonoBehaviour
     public bool followLightFlicker = true;
     [Tooltip("Cut the beam where it meets opaque geometry using the URP depth texture.")]
     public bool clipWithSceneDepth = true;
+    [Tooltip("Objects between the light and the beam cast dark shafts through it. " +
+             "Needs the Light's Shadow Type set to Hard or Soft and URP additional light shadows enabled.")]
+    public bool occludeWithLightShadows = true;
 
     [Header("TestScene Preview")]
     [Tooltip("TestScene only: spawn a disposable mirror when the scene has no MirrorReflection.")]
@@ -108,6 +111,7 @@ public class LightBeamGuide : MonoBehaviour
     static readonly int NoiseStrengthId = Shader.PropertyToID("_NoiseStrength");
     static readonly int StepsId = Shader.PropertyToID("_Steps");
     static readonly int UseSceneDepthId = Shader.PropertyToID("_UseSceneDepth");
+    static readonly int UseLightShadowsId = Shader.PropertyToID("_UseLightShadows");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void AttachInTestScene()
@@ -159,6 +163,15 @@ public class LightBeamGuide : MonoBehaviour
                              "the beam falls back to a raycast length instead of per-pixel clipping.");
         }
 
+        if (occludeWithLightShadows)
+        {
+            var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            if (sourceLight.shadows == LightShadows.None)
+                Debug.LogWarning($"[LightBeamGuide] '{name}' has Shadow Type None, so objects won't block its beam.", this);
+            else if (urp != null && !urp.supportsAdditionalLightShadows)
+                Debug.LogWarning($"[LightBeamGuide] '{urp.name}' has additional light shadows disabled, so objects won't block beams.", this);
+        }
+
         beamMaterial = new Material(beamShader) { name = name + " Volumetric Beam" };
         beamVolume = CreateVolume(name + " BeamVolume", beamMaterial, out beamMesh, out beamRenderer);
     }
@@ -201,6 +214,7 @@ public class LightBeamGuide : MonoBehaviour
         guide.noiseSpeed = noiseSpeed;
         guide.noiseStrength = noiseStrength;
         guide.clipWithSceneDepth = clipWithSceneDepth;
+        guide.occludeWithLightShadows = occludeWithLightShadows;
     }
 
     void LateUpdate()
@@ -285,6 +299,7 @@ public class LightBeamGuide : MonoBehaviour
         material.SetFloat(NoiseStrengthId, noiseStrength);
         material.SetFloat(StepsId, raymarchSteps);
         material.SetFloat(UseSceneDepthId, clipWithSceneDepth && depthTextureAvailable ? 1f : 0f);
+        material.SetFloat(UseLightShadowsId, occludeWithLightShadows ? 1f : 0f);
     }
 
     void SpawnPreviewMirror()
