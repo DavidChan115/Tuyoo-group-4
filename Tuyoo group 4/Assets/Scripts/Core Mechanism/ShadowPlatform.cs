@@ -3,19 +3,20 @@ using System.Collections.Generic;
 
 public class ShadowPlatform : MonoBehaviour
 {
-    // In Unity, you can group and organize your variables in the Inspector window using the [Header] attribute. 
-    // This attribute places "a bold title text above your fields", visually categorizing large collections of public or serialized variable
+
+    // [Header("name")] groups your variables in the Inspector window. 
+    // This header places "a bold name above your fields", visually categorizing large collections of public or serialized variable
     [Header("References")]
-    public Light[] lights; // Option under the [Header] attribute, (name)[] means you can add multiple object under this option instead of 1
+    public Light[] lights; // public name[] means you can add multiple object under this option instead of single object
     public GameObject shadowCaster;
     public GameObject[] groundObjects;
     public Material shadowMaterial;
 
     [Header("Spotlight")]
-    public bool enforceSpotCone = true; // 
+    public bool enforceSpotCone = true; // public bool = true or false checkbox in the inspector window
 
     [Header("Ground Settings")]
-    public float groundY = 0f;
+    public float groundY = 0f;  // puiblic float/int can let you change the value in inspector window
     public float yOffset = 0.05f;
 
     [Header("Quality")]
@@ -26,83 +27,145 @@ public class ShadowPlatform : MonoBehaviour
     public float maxShadowDistance = 50f;
 
     [Header("Fade")]
-    [Range(0f, 1f)]
+    [Range(0f, 1f)]       // [Range(number, number)] makes the variable under this an adjustable value slider
     public float shadowNearOpacity = 0.6f;
+
     [Range(0f, 1f)]
     public float shadowFarOpacity = 0f;
 
     [Header("Fade In")]
+    // When you select the ShadowPlatform component in the Unity Inspector, 
+    // if you hover your mouse over the fadeInDuration field, Unity will show that text as a little popup description.
     [Tooltip("Seconds for the shadow to fade from fully transparent to its target opacity when it first appears.")]
     public float fadeInDuration = 0.7f;
 
-    // Runtime fade state
+
+
+    
+    // Below variables are all private runtime variables. They are NOT shown in the Inspector. 
+    // The script creates and uses them while the game is running
+    
+    // Fade-related
     private float fadeAlpha = 0f;        // 0 = invisible, 1 = full opacity
     private bool wasShadowVisible = false;
     private Material matInstance;        // per-renderer instance; never modifies the shared/source material
     private Color matOrigColor;          // original colour at full opacity, cached once in Start
 
+
+    // Generated shadow object related
     private GameObject platformChild;
     private Mesh shadowMesh;
     private MeshCollider meshCollider;
     private MeshRenderer meshRenderer;
     private MeshFilter meshFilter;
 
+
+    // Temporary / debug data used while calculating the shadow
     private List<Vector2> debugHull = new List<Vector2>();
     private float debugTargetY;
     private bool debugHasShadow;
     private Vector2 obstacleCenterXZ;
     private float shadowHeight;
 
+
+
+
     void Start()
     {
-        platformChild = new GameObject("ShadowPlatformMesh");
-        platformChild.transform.position = Vector3.zero;
-        platformChild.layer = 0;
+        // Create the empty object that will HOLD the shadow, 
+        // This object will carry:
+        // 1. the mesh, 
+        // 2. renderer
+        // 3. collider of the shadow.
+        platformChild = new GameObject("ShadowPlatformMesh");       // object named "ShadowPlatformMesh"
+        platformChild.transform.position = Vector3.zero;          // Puts it at world origin (0,0,0), Vector3 = 3D location
+        platformChild.layer = 0;            // Sets its layer to Default (0).
 
+
+
+        // 1. Create an empty mesh for the shadow, we will fill it with vertices data later
         shadowMesh = new Mesh();
-        shadowMesh.name = "DynamicShadow";
+        shadowMesh.name = "DynamicShadow";    // name the shadow object as "DynamicShadow"
 
-        meshFilter = platformChild.AddComponent<MeshFilter>();
-        meshFilter.mesh = shadowMesh;
+        // Add MeshFilter and give it the mesh
+        meshFilter = platformChild.AddComponent<MeshFilter>();    // Meshfilter tells Unity that "platformChild" object has a mesh in it
+        meshFilter.mesh = shadowMesh;      //  the mesh inside the "platformChild" object is "DynamicShadow" we created ABOVE
 
-        meshRenderer = platformChild.AddComponent<MeshRenderer>();
-        meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
+
+
+        // 2. Add MeshRenderer (the thing that draws it)
+        meshRenderer = platformChild.AddComponent<MeshRenderer>();     
+        // Turns off shadow casting, the shadow platform itself should NOT cast more shadows
+        meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; 
+
+        // Assign a material to the shadow
         if (shadowMaterial != null)
         {
-            meshRenderer.material = shadowMaterial;
+            meshRenderer.material = shadowMaterial;      // If you dragged a material into the Inspector window, then we use that.
+            // ***** WE SHOULD BE USING THIS *****
         }
         else
         {
-            // Use URP Unlit — guaranteed included in URP builds, unlike Built-in shaders.
+            // Tries to find the built-in URP Unlit shader by name.
+            // This is the simplest shader in URP, no lighting calculation, just pure color
             Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+
             if (shader == null)
             {
+                // This only happens if your project is not using URP, or the shader was somehow removed
+                // RARELY happen
                 Debug.LogError("[ShadowPlatform] URP/Unlit shader not found. Assign a material in the Inspector.");
                 return;
             }
-            Material mat = new Material(shader);
-            mat.color = new Color(0, 0, 0, 0.6f);
-            mat.SetFloat("_Surface", 1f); // Transparent
+
+            Material mat = new Material(shader);    // Creates a brand new material that uses that Unlit shader 
+
+            // R = 0, G = 0, B = 0 = pure black
+            // A = 0.6 = 60% opaque (so you can still see through it a bit)
+            mat.color = new Color(0, 0, 0, 0.6f);   
+
+            // Tells the URP material that it should be Transparent instead of Opaque
+            // 0 = Opaque
+            // 1 = Transparent
+            mat.SetFloat("_Surface", 1f);
+
             meshRenderer.material = mat;
         }
 
-        meshCollider = platformChild.AddComponent<MeshCollider>();
-        meshCollider.convex = false;
-        meshCollider.isTrigger = false;
-        meshCollider.enabled = false; // disabled until shadow fully fades in
 
-        // Cache a per-renderer material instance so runtime alpha changes
-        // never affect the original shared/source material asset.
-        matInstance = meshRenderer.material;
+
+
+        // 3. Add MeshCollider (so player can stand on it)
+        meshCollider = platformChild.AddComponent<MeshCollider>();
+
+        meshCollider.convex = false;     // convex = false, means allowing complex non-convex shapes (Ex. star shape, Arrow shape)
+        meshCollider.isTrigger = false;  // it is a walkable plaform, NOT just a shadow
+        meshCollider.enabled = false;    // disabled until shadow fully fades in
+
+
+
+
+        // Prepare material for fading
+        matInstance = meshRenderer.material; 
         matOrigColor = matInstance.color;
+        // Gets a private copy of the material (matInstance) so changing alpha doesn't affect the original asset.
+
         Color startTransparent = matOrigColor;
-        startTransparent.a = 0f;
-        matInstance.color = startTransparent; // start invisible; Update() animates alpha in
+
+        startTransparent.a = 0f;    // Forces the alpha to 0 (fully transparent) at the start
+        matInstance.color = startTransparent;      // start invisible; 
+        // Later in Update(), the script will gradually raise this alpha to make the shadow fade in
     }
+
+
+
+
 
     void Update()
     {
+        // If there are no lights assigned, just kill everything and exit early
+        // Because no lights = no shadow
         if (lights == null || lights.Length == 0)
         {
             meshCollider.enabled = false;
@@ -112,14 +175,22 @@ public class ShadowPlatform : MonoBehaviour
             return;
         }
 
+
+        // If we forgot to assign a shadow caster in the Inspector, it just uses itself
         if (shadowCaster == null)
             shadowCaster = gameObject;
+        // we DON'T assign shadowCaster, so the shadowCaster will automatically be every obstacle with this script
+
+
 
         // Reset the fade counter the moment the shadow re-appears from nothing.
         if (!wasShadowVisible)
             fadeAlpha = 0f;
 
+
         UpdateShadow();
+
+
 
         // Animate fade-in while the shadow is present; reset instantly when absent.
         if (debugHasShadow)
@@ -128,7 +199,11 @@ public class ShadowPlatform : MonoBehaviour
         else
             fadeAlpha = 0f;
 
+
+
         wasShadowVisible = debugHasShadow;
+
+
 
         // Animate material alpha — this drives the visual fade reliably regardless
         // of whether the assigned material reads vertex-colour alpha.
@@ -136,11 +211,22 @@ public class ShadowPlatform : MonoBehaviour
             matInstance.color = new Color(matOrigColor.r, matOrigColor.g, matOrigColor.b,
                                           matOrigColor.a * fadeAlpha);
 
+
+
         // Collider is only solid once the shadow has fully materialised.
         // While fading in the player falls through, enforcing the mechanic.
         if (meshCollider != null)
             meshCollider.enabled = debugHasShadow && (fadeAlpha >= 1f);
     }
+
+
+
+
+
+
+
+
+
 
     void UpdateShadow()
     {
@@ -295,6 +381,11 @@ public class ShadowPlatform : MonoBehaviour
         // Collider activation is managed by Update() once fadeAlpha reaches 1.
     }
 
+
+
+
+
+
     Rect? GetGroundBoundsXZ()
     {
         float minX = float.MaxValue, maxX = float.MinValue;
@@ -321,6 +412,12 @@ public class ShadowPlatform : MonoBehaviour
         return new Rect(minX, minZ, maxX - minX, maxZ - minZ);
     }
 
+
+
+
+
+
+
     /// <summary>
     /// Sutherland–Hodgman polygon clipping: clips convexHull to a rectangle in XZ space.
     /// Rect x = world X, Rect y = world Z.
@@ -337,6 +434,10 @@ public class ShadowPlatform : MonoBehaviour
 
         return output;
     }
+
+
+
+
 
     List<Vector2> ClipEdge(List<Vector2> polygon, Vector2 edgePoint, Vector2 edgeNormal)
     {
@@ -381,6 +482,11 @@ public class ShadowPlatform : MonoBehaviour
 
         return output;
     }
+
+
+
+
+
 
     bool GetCylinderParams(MeshFilter filter, Transform casterTransform,
         out float bottomY, out float topY, out float radius, out Vector3 centerXZ)
@@ -438,6 +544,11 @@ public class ShadowPlatform : MonoBehaviour
         return false;
     }
 
+
+
+
+
+
     void ClearShadow()
     {
         shadowMesh.Clear();
@@ -445,6 +556,11 @@ public class ShadowPlatform : MonoBehaviour
         debugHasShadow = false;
         debugHull.Clear();
     }
+
+
+
+
+
 
     Vector3 ProjectPoint(Vector3 worldPoint, Vector3 lightPos, float targetY)
     {
@@ -460,6 +576,11 @@ public class ShadowPlatform : MonoBehaviour
 
         return lightPos + dir * t;
     }
+
+
+
+
+
 
     List<Vector2> ConvexHull(List<Vector2> points)
     {
@@ -507,10 +628,19 @@ public class ShadowPlatform : MonoBehaviour
         return hull;
     }
 
+
+
+
+
     float Cross(Vector2 O, Vector2 A, Vector2 B)
     {
         return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
     }
+
+
+
+
+
 
     void BuildMesh(List<Vector2> hullXZ, float cylinderRadius)
     {
@@ -577,6 +707,11 @@ public class ShadowPlatform : MonoBehaviour
         shadowMesh.RecalculateNormals();
         shadowMesh.RecalculateBounds();
     }
+
+
+
+
+
 
     void OnDrawGizmos()
     {
