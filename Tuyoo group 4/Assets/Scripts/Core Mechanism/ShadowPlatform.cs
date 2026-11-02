@@ -6,13 +6,13 @@ public class ShadowPlatform : MonoBehaviour
     // In Unity, you can group and organize your variables in the Inspector window using the [Header] attribute. 
     // This attribute places "a bold title text above your fields", visually categorizing large collections of public or serialized variable
     [Header("References")]
-    public Light[] lights; // Option under the [Header] attribute
+    public Light[] lights; // Option under the [Header] attribute, (name)[] means you can add multiple object under this option instead of 1
     public GameObject shadowCaster;
     public GameObject[] groundObjects;
     public Material shadowMaterial;
 
     [Header("Spotlight")]
-    public bool enforceSpotCone = true;
+    public bool enforceSpotCone = true; // 
 
     [Header("Ground Settings")]
     public float groundY = 0f;
